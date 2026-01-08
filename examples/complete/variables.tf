@@ -145,6 +145,12 @@ variable "license_key" {
   sensitive   = true
 }
 
+variable "license_server_uri" {
+  description = "Quine Enterprise license server URI."
+  type        = string
+  default     = "https://license-server.dev.thatdot.com"
+}
+
 variable "container_secrets" {
   description = "Secrets from SSM/Secrets Manager"
   type = list(object({

@@ -33,3 +33,9 @@ variable "license_key" {
   type        = string
   sensitive   = true
 }
+
+variable "license_server_uri" {
+  description = "Quine Enterprise license server URI."
+  type        = string
+  default     = "https://license-server.dev.thatdot.com"
+}

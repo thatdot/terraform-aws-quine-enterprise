@@ -12,4 +12,5 @@ aws_region = "us-west-2"
 container_image = "your-registry/quine-enterprise:latest"
 
 # Quine Enterprise Configuration
-license_key = ""  # Required - your Quine Enterprise license key
+license_key        = ""                                       # Required - your Quine Enterprise license key
+license_server_uri = "https://license.thatdot.com" # License server URI

@@ -88,6 +88,7 @@ locals {
   # Build JDK_JAVA_OPTIONS from Quine Enterprise configuration variables
   jdk_java_options = join(" ", [
     "-Dquine.license-key=${var.license_key}",
+    "-Dquine.license-server-uri=${var.license_server_uri}",
   ])
 }
 

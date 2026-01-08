@@ -62,7 +62,8 @@ container_cpu    = 4096   # 4 vCPU
 container_memory = 8192   # 8 GB
 
 # Quine Enterprise Configuration
-license_key = ""  # Required - your Quine Enterprise license key
+license_key        = ""                                       # Required - your Quine Enterprise license key
+license_server_uri = "https://license.thatdot.com" # License server URI
 
 # Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
 # container_secrets = [
