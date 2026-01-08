@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
-# Complete Example - Quine on ECS Fargate with Custom VPC and HTTPS
+# Complete Example - Quine Enterprise on ECS Fargate with Custom VPC and HTTPS
 # -----------------------------------------------------------------------------
-# This example demonstrates a production-ready deployment of Quine with:
+# This example demonstrates a production-ready deployment of Quine Enterprise with:
 # - Custom VPC and subnets
 # - HTTPS with ACM certificate
 # - Custom container configuration

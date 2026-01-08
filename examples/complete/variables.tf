@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Variables for Complete Example
 # -----------------------------------------------------------------------------
-# These variables allow full customization of the Quine deployment.
+# These variables allow full customization of the Quine Enterprise deployment.
 # Copy terraform.tfvars.example to terraform.tfvars and customize.
 # -----------------------------------------------------------------------------
 
@@ -113,9 +113,8 @@ variable "container_name" {
 }
 
 variable "container_image" {
-  description = "Docker image"
+  description = "Docker image to run in the ECS task. This is required and must be provided by the user."
   type        = string
-  default     = "thatdot/quine:latest"
 }
 
 variable "container_port" {

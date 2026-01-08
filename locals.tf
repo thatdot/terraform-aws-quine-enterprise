@@ -26,7 +26,7 @@ locals {
       Project     = var.project_name
       Environment = var.environment
       ManagedBy   = "Terraform"
-      Module      = "terraform-aws-thatdot"
+      Module      = "terraform-aws-quine-enterprise"
     },
     var.tags
   )

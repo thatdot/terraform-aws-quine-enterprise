@@ -7,3 +7,6 @@
 
 # AWS Configuration
 aws_region = "us-west-2"
+
+# Container Configuration (Required)
+container_image = "your-registry/quine-enterprise:latest"  # Required - provide your Quine Enterprise image

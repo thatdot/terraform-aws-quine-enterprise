@@ -1,15 +1,16 @@
 # -----------------------------------------------------------------------------
-# Basic Example - Quine on ECS Fargate
+# Basic Example - Quine Enterprise on ECS Fargate
 # -----------------------------------------------------------------------------
-# This example demonstrates the simplest deployment of Quine using the module
-# with minimal configuration. It uses the default VPC and sensible defaults.
+# This example demonstrates the simplest deployment of Quine Enterprise using
+# the module with minimal configuration. It uses the default VPC and sensible
+# defaults.
 #
 # Usage:
 #   terraform init
 #   terraform plan
 #   terraform apply
 #
-# After deployment, access Quine at the URL shown in the outputs.
+# After deployment, access Quine Enterprise at the URL shown in the outputs.
 # -----------------------------------------------------------------------------
 
 terraform {
@@ -36,12 +37,15 @@ provider "aws" {
   }
 }
 
-# Deploy Quine using the module
+# Deploy Quine Enterprise using the module
 module "quine" {
   source = "../../"
 
   # Required: Project name for resource naming
   project_name = "quine-basic"
+
+  # Required: Container image - must be provided by the user
+  container_image = var.container_image
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"
@@ -51,5 +55,4 @@ module "quine" {
   # - 2048 CPU units (2 vCPU)
   # - 4096 MB memory (4 GB)
   # - 1 task instance
-  # - thatdot/quine:latest image
 }

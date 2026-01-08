@@ -128,9 +128,8 @@ variable "container_name" {
 }
 
 variable "container_image" {
-  description = "Docker image to run in the ECS task (e.g., 'thatdot/quine:latest' or 'ECR_URI:tag')."
+  description = "Docker image to run in the ECS task. This is required and must be provided by the user (e.g., 'your-repo/quine-enterprise:tag' or 'ECR_URI:tag')."
   type        = string
-  default     = "thatdot/quine:latest"
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$", var.container_image)) || can(regex("^[0-9]+\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/", var.container_image))

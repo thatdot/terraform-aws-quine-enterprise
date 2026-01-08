@@ -1,9 +1,9 @@
-# Terraform AWS thatDot Module
+# Terraform AWS Quine Enterprise Module
 
-[![Terraform Registry](https://img.shields.io/badge/terraform-registry-blue.svg)](https://registry.terraform.io/modules/thatdot/thatdot/aws)
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-blue.svg)](https://registry.terraform.io/modules/thatdot/quine-enterprise/aws)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Terraform module to deploy [Quine](https://quine.io/) streaming graph on AWS ECS Fargate with an Application Load Balancer.
+Terraform module to deploy Quine Enterprise on AWS ECS Fargate with an Application Load Balancer.
 
 ## Features
 
@@ -50,10 +50,10 @@ Terraform module to deploy [Quine](https://quine.io/) streaming graph on AWS ECS
 
 ```hcl
 module "quine" {
-  source  = "thatdot/thatdot/aws"
-  version = "1.0.0"
+  source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name = "my-quine"
+  project_name    = "my-quine"
+  container_image = "your-registry/quine-enterprise:latest"  # Required
 }
 
 output "url" {
@@ -65,11 +65,11 @@ output "url" {
 
 ```hcl
 module "quine" {
-  source  = "thatdot/thatdot/aws"
-  version = "1.0.0"
+  source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name = "quine-prod"
-  environment  = "prod"
+  project_name    = "quine-prod"
+  environment     = "prod"
+  container_image = "your-registry/quine-enterprise:latest"  # Required
 
   # Custom VPC
   vpc_id     = "vpc-0123456789abcdef0"
@@ -156,7 +156,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `container_name` | Container name | `string` | `"quine"` |
-| `container_image` | Docker image | `string` | `"thatdot/quine:latest"` |
+| `container_image` | Docker image (required) | `string` | n/a |
 | `container_port` | Container port | `number` | `8080` |
 | `container_cpu` | CPU units (256-16384) | `number` | `2048` |
 | `container_memory` | Memory in MB | `number` | `4096` |
@@ -260,11 +260,12 @@ See the [examples](./examples/) directory for complete usage examples:
 
 ```hcl
 module "quine" {
-  source = "thatdot/thatdot/aws"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name = "quine"
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.public_subnets
+  project_name    = "quine"
+  container_image = "your-registry/quine-enterprise:latest"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.public_subnets
 }
 ```
 
@@ -272,9 +273,10 @@ module "quine" {
 
 ```hcl
 module "quine" {
-  source = "thatdot/thatdot/aws"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name = "quine"
+  project_name    = "quine"
+  container_image = "your-registry/quine-enterprise:latest"
 
   container_environment = [
     {
@@ -293,9 +295,10 @@ module "quine" {
 
 ```hcl
 module "quine" {
-  source = "thatdot/thatdot/aws"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name = "quine"
+  project_name    = "quine"
+  container_image = "your-registry/quine-enterprise:latest"
 
   container_secrets = [
     {
@@ -310,9 +313,10 @@ module "quine" {
 
 ```hcl
 module "quine" {
-  source = "thatdot/thatdot/aws"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
   project_name    = "quine"
+  container_image = "your-registry/quine-enterprise:latest"
   enable_https    = true
   certificate_arn = aws_acm_certificate.quine.arn
 }
@@ -354,5 +358,5 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [Quine](https://quine.io/) - Streaming graph for connected data
-- [thatDot](https://thatdot.com/) - Company behind Quine
+- [Quine Enterprise](https://quine.io/) - Enterprise streaming graph for connected data
+- [thatDot](https://thatdot.com/) - Company behind Quine Enterprise

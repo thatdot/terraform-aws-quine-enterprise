@@ -53,7 +53,7 @@ enable_container_insights = true
 # Container Configuration
 # -----------------------------------------------------------------------------
 container_name  = "quine"
-container_image = "thatdot/quine:latest"
+container_image = "your-registry/quine-enterprise:latest"  # Required - provide your Quine Enterprise image
 container_port  = 8080
 
 # Fargate CPU/Memory (see AWS Fargate pricing for valid combinations)
