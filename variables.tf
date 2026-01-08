@@ -119,7 +119,7 @@ variable "desired_count" {
 variable "container_name" {
   description = "Name of the container within the task definition."
   type        = string
-  default     = "quine"
+  default     = "quine-enterprise"
 
   validation {
     condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_-]{0,254}$", var.container_name))

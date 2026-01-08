@@ -141,7 +141,7 @@ resource "aws_acm_certificate_validation" "this" {
 # Module Deployment
 # -----------------------------------------------------------------------------
 
-module "quine" {
+module "quine_enterprise" {
   source = "../../"
 
   # Project identification
@@ -225,8 +225,8 @@ resource "aws_route53_record" "alb_alias" {
   type    = "A"
 
   alias {
-    name                   = module.quine.alb_dns_name
-    zone_id                = module.quine.alb_zone_id
+    name                   = module.quine_enterprise.alb_dns_name
+    zone_id                = module.quine_enterprise.alb_zone_id
     evaluate_target_health = true
   }
 }

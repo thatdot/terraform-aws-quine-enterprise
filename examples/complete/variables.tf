@@ -109,7 +109,7 @@ variable "desired_count" {
 variable "container_name" {
   description = "Container name"
   type        = string
-  default     = "quine"
+  default     = "quine-enterprise"
 }
 
 variable "container_image" {

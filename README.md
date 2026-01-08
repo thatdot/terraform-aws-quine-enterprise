@@ -49,25 +49,25 @@ Terraform module to deploy Quine Enterprise on AWS ECS Fargate with an Applicati
 ### Minimal Configuration
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "my-quine"
+  project_name    = "my-quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"  # Required
 }
 
 output "url" {
-  value = module.quine.alb_url
+  value = module.quine_enterprise.alb_url
 }
 ```
 
 ### Production Configuration
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "quine-prod"
+  project_name    = "quine-enterprise-prod"
   environment     = "prod"
   container_image = "your-registry/quine-enterprise:latest"  # Required
 
@@ -155,7 +155,7 @@ See the [examples](./examples/) directory for complete usage examples:
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `container_name` | Container name | `string` | `"quine"` |
+| `container_name` | Container name | `string` | `"quine-enterprise"` |
 | `container_image` | Docker image (required) | `string` | n/a |
 | `container_port` | Container port | `number` | `8080` |
 | `container_cpu` | CPU units (256-16384) | `number` | `2048` |
@@ -259,10 +259,10 @@ See the [examples](./examples/) directory for complete usage examples:
 ### Using with Custom VPC
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "quine"
+  project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
   vpc_id          = module.vpc.vpc_id
   subnet_ids      = module.vpc.public_subnets
@@ -272,10 +272,10 @@ module "quine" {
 ### With Environment Variables
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "quine"
+  project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
   container_environment = [
@@ -294,10 +294,10 @@ module "quine" {
 ### With Secrets
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "quine"
+  project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
   container_secrets = [
@@ -312,23 +312,23 @@ module "quine" {
 ### With HTTPS and Route53
 
 ```hcl
-module "quine" {
+module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name    = "quine"
+  project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
   enable_https    = true
-  certificate_arn = aws_acm_certificate.quine.arn
+  certificate_arn = aws_acm_certificate.quine_enterprise.arn
 }
 
-resource "aws_route53_record" "quine" {
+resource "aws_route53_record" "quine_enterprise" {
   zone_id = data.aws_route53_zone.main.zone_id
-  name    = "quine.example.com"
+  name    = "quine-enterprise.example.com"
   type    = "A"
 
   alias {
-    name                   = module.quine.alb_dns_name
-    zone_id                = module.quine.alb_zone_id
+    name                   = module.quine_enterprise.alb_dns_name
+    zone_id                = module.quine_enterprise.alb_zone_id
     evaluate_target_health = true
   }
 }

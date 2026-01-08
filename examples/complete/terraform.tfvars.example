@@ -52,7 +52,7 @@ enable_container_insights = true
 # -----------------------------------------------------------------------------
 # Container Configuration
 # -----------------------------------------------------------------------------
-container_name  = "quine"
+container_name  = "quine-enterprise"
 container_image = "your-registry/quine-enterprise:latest"  # Required - provide your Quine Enterprise image
 container_port  = 8080
 

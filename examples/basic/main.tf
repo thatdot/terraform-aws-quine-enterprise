@@ -49,11 +49,11 @@ locals {
 }
 
 # Deploy Quine Enterprise using the module
-module "quine" {
+module "quine_enterprise" {
   source = "../../"
 
   # Required: Project name for resource naming
-  project_name = "quine-basic"
+  project_name = "quine-enterprise-basic"
 
   # Required: Container image - must be provided by the user
   container_image = var.container_image
