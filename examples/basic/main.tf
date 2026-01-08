@@ -37,6 +37,16 @@ provider "aws" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Locals - Build JDK_JAVA_OPTIONS from variables
+# -----------------------------------------------------------------------------
+
+locals {
+  jdk_java_options = join(" ", [
+    "-Dquine.license-key=${var.license_key}",
+  ])
+}
+
 # Deploy Quine Enterprise using the module
 module "quine" {
   source = "../../"
@@ -46,6 +56,14 @@ module "quine" {
 
   # Required: Container image - must be provided by the user
   container_image = var.container_image
+
+  # Environment variables built from Quine Enterprise configuration
+  container_environment = [
+    {
+      name  = "JDK_JAVA_OPTIONS"
+      value = local.jdk_java_options
+    }
+  ]
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"

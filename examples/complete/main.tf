@@ -84,6 +84,11 @@ locals {
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : (
     local.create_certificate ? aws_acm_certificate.this[0].arn : null
   )
+
+  # Build JDK_JAVA_OPTIONS from Quine Enterprise configuration variables
+  jdk_java_options = join(" ", [
+    "-Dquine.license-key=${var.license_key}",
+  ])
 }
 
 # -----------------------------------------------------------------------------
@@ -167,8 +172,13 @@ module "quine" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # Environment variables
-  container_environment = var.container_environment
+  # Environment variables built from Quine Enterprise configuration
+  container_environment = [
+    {
+      name  = "JDK_JAVA_OPTIONS"
+      value = local.jdk_java_options
+    }
+  ]
 
   # Secrets (from SSM Parameter Store or Secrets Manager)
   container_secrets = var.container_secrets

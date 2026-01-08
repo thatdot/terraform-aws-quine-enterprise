@@ -135,13 +135,14 @@ variable "container_memory" {
   default     = 8192
 }
 
-variable "container_environment" {
-  description = "Environment variables"
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default = []
+# -----------------------------------------------------------------------------
+# Quine Enterprise Configuration
+# -----------------------------------------------------------------------------
+
+variable "license_key" {
+  description = "Quine Enterprise license key."
+  type        = string
+  sensitive   = true
 }
 
 variable "container_secrets" {

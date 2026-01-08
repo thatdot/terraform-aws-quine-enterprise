@@ -23,3 +23,13 @@ variable "container_image" {
   description = "Docker image to run in the ECS task. This is required and must be provided by the user."
   type        = string
 }
+
+# -----------------------------------------------------------------------------
+# Quine Enterprise Configuration
+# -----------------------------------------------------------------------------
+
+variable "license_key" {
+  description = "Quine Enterprise license key."
+  type        = string
+  sensitive   = true
+}

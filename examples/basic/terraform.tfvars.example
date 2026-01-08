@@ -9,4 +9,7 @@
 aws_region = "us-west-2"
 
 # Container Configuration (Required)
-container_image = "your-registry/quine-enterprise:latest"  # Required - provide your Quine Enterprise image
+container_image = "your-registry/quine-enterprise:latest"
+
+# Quine Enterprise Configuration
+license_key = ""  # Required - your Quine Enterprise license key

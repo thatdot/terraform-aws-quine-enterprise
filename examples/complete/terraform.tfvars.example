@@ -61,17 +61,8 @@ container_port  = 8080
 container_cpu    = 4096   # 4 vCPU
 container_memory = 8192   # 8 GB
 
-# Environment variables (optional)
-container_environment = [
-  {
-    name  = "JAVA_OPTS"
-    value = "-Xms4g -Xmx6g"
-  },
-  {
-    name  = "QUINE_WEBSERVER_ADDRESS"
-    value = "0.0.0.0"
-  }
-]
+# Quine Enterprise Configuration
+license_key = ""  # Required - your Quine Enterprise license key
 
 # Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
 # container_secrets = [
