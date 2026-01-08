@@ -1,0 +1,133 @@
+# -----------------------------------------------------------------------------
+# Example Configuration for Production Deployment
+# -----------------------------------------------------------------------------
+# Copy this file to terraform.tfvars and customize for your environment.
+# Lines starting with # are comments.
+# -----------------------------------------------------------------------------
+
+# AWS Configuration
+aws_region = "us-west-2"
+
+# Project Configuration
+project_name = "quine-prod"
+environment  = "prod"
+
+# Additional tags (optional)
+tags = {
+  Team      = "platform"
+  CostCenter = "engineering"
+}
+
+# -----------------------------------------------------------------------------
+# Network Configuration
+# -----------------------------------------------------------------------------
+# Option 1: Use default VPC (leave vpc_id and subnet_ids as null)
+# Option 2: Specify VPC ID directly
+# vpc_id = "vpc-0123456789abcdef0"
+
+# Option 3: Look up VPC by name tag
+# vpc_name = "production-vpc"
+
+# Option 4: Specify subnet IDs directly
+# subnet_ids = ["subnet-111111", "subnet-222222", "subnet-333333"]
+
+# Option 5: Look up subnets by name tag pattern
+# subnet_tag_filter = "*-public-*"
+
+# Set to false if using private subnets with NAT gateway
+assign_public_ip = true
+
+# -----------------------------------------------------------------------------
+# ECS Configuration
+# -----------------------------------------------------------------------------
+# cluster_name = "quine-production"  # Optional: defaults to {project_name}-cluster
+# service_name = "quine-service"     # Optional: defaults to {project_name}-service
+
+# Number of task instances
+# desired_count = 1
+
+# Enable CloudWatch Container Insights for monitoring
+enable_container_insights = true
+
+# -----------------------------------------------------------------------------
+# Container Configuration
+# -----------------------------------------------------------------------------
+container_name  = "quine"
+container_image = "thatdot/quine:latest"
+container_port  = 8080
+
+# Fargate CPU/Memory (see AWS Fargate pricing for valid combinations)
+# Valid CPU values: 256, 512, 1024, 2048, 4096, 8192, 16384
+container_cpu    = 4096   # 4 vCPU
+container_memory = 8192   # 8 GB
+
+# Environment variables (optional)
+container_environment = [
+  {
+    name  = "JAVA_OPTS"
+    value = "-Xms4g -Xmx6g"
+  },
+  {
+    name  = "QUINE_WEBSERVER_ADDRESS"
+    value = "0.0.0.0"
+  }
+]
+
+# Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
+# container_secrets = [
+#   {
+#     name      = "DATABASE_PASSWORD"
+#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/quine/db-password"
+#   },
+#   {
+#     name      = "API_KEY"
+#     valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/prod/quine/api-key"
+#   }
+# ]
+
+# -----------------------------------------------------------------------------
+# Load Balancer Configuration
+# -----------------------------------------------------------------------------
+internal_alb      = false  # Set true for internal-only access
+health_check_path = "/api/v1/liveness"
+
+# Enable deletion protection in production (disabled by default for easier iteration)
+# enable_deletion_protection = true
+
+# -----------------------------------------------------------------------------
+# HTTPS Configuration (recommended for production)
+# -----------------------------------------------------------------------------
+# Option 1: Let Terraform create the ACM certificate and Route53 alias record
+# This is the recommended approach - just provide your domain and hosted zone ID
+#
+# enable_https   = true
+# domain_name    = "quine.example.com"
+# hosted_zone_id = "Z0123456789ABCDEFGHIJ"
+# ssl_policy     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+#
+# Option 2: Use an existing ACM certificate
+# Use this if you already have a certificate or need more control
+#
+# enable_https    = true
+# certificate_arn = "arn:aws:acm:us-west-2:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+# ssl_policy      = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
+log_retention_days = 30
+
+# -----------------------------------------------------------------------------
+# Security Configuration
+# -----------------------------------------------------------------------------
+# Restrict ALB access to specific CIDR blocks (recommended for production)
+# alb_ingress_cidr_blocks = ["10.0.0.0/8", "192.168.0.0/16"]
+
+# For public access:
+alb_ingress_cidr_blocks = ["0.0.0.0/0"]
+
+# Additional IAM policies for the task role (if Quine needs AWS service access)
+# additional_task_role_policy_arns = [
+#   "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+#   "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+# ]

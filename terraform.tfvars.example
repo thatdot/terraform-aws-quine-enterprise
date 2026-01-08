@@ -1,0 +1,17 @@
+# AWS Configuration
+aws_region   = "us-west-2"
+project_name = "thatdot-ecs"
+environment  = "dev"
+
+# ECS Configuration
+cluster_name     = "thatdot-ecs-cluster"
+service_name     = "thatdot-ecs-service"
+container_name   = "quine"
+container_image  = "thatdot/quine:latest"
+container_port   = 8080
+container_cpu    = 2048
+container_memory = 4096
+desired_count    = 1
+
+# Health Check
+health_check_path = "/api/v1/liveness"

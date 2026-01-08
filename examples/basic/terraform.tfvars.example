@@ -1,0 +1,9 @@
+# -----------------------------------------------------------------------------
+# Example Configuration for Basic Deployment
+# -----------------------------------------------------------------------------
+# Copy this file to terraform.tfvars and customize for your environment.
+# Lines starting with # are comments.
+# -----------------------------------------------------------------------------
+
+# AWS Configuration
+aws_region = "us-west-2"

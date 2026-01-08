@@ -1,0 +1,116 @@
+# -----------------------------------------------------------------------------
+# Terraform
+# -----------------------------------------------------------------------------
+
+# Local .terraform directories
+.terraform/
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Lock file - include this in .gitignore if you want to allow different
+# provider versions across different machines. For shared modules, it's
+# typically better to NOT commit this file.
+.terraform.lock.hcl
+
+# Override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive variable files
+*.tfvars
+*.tfvars.json
+
+# BUT allow example tfvars files
+!*.tfvars.example
+!terraform.tfvars.example
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# -----------------------------------------------------------------------------
+# IDE and Editor
+# -----------------------------------------------------------------------------
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*\#
+.\#*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# -----------------------------------------------------------------------------
+# OS Generated
+# -----------------------------------------------------------------------------
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Testing and CI
+# -----------------------------------------------------------------------------
+
+# Test output
+*.test
+coverage/
+.coverage
+
+# Terratest
+*.log
+
+# -----------------------------------------------------------------------------
+# Documentation Generation
+# -----------------------------------------------------------------------------
+
+# terraform-docs output (if auto-generated)
+# docs/
+
+# -----------------------------------------------------------------------------
+# Secrets and Credentials
+# -----------------------------------------------------------------------------
+
+# AWS credentials (should never be in repo)
+.aws/
+credentials
+credentials.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Private keys
+*.pem
+*.key
+id_rsa
+id_dsa
