@@ -346,7 +346,7 @@ variable "additional_execution_role_policy_arns" {
 variable "cluster_target_size" {
   description = "Target number of Quine Enterprise cluster members. When > 1, enables multi-member cluster mode with DNS-based service discovery for cluster join."
   type        = number
-  default     = 3
+  default     = 1
 
   validation {
     condition     = var.cluster_target_size >= 1 && var.cluster_target_size <= 10
