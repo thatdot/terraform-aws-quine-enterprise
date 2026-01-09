@@ -176,13 +176,9 @@ module "quine_enterprise" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # Environment variables built from Quine Enterprise configuration
-  container_environment = [
-    {
-      name  = "JDK_JAVA_OPTIONS"
-      value = local.jdk_java_options
-    }
-  ]
+  # Java options for Quine Enterprise (license configuration)
+  # The module automatically adds cluster-related Java options
+  java_opts = local.jdk_java_options
 
   # Secrets (from SSM Parameter Store or Secrets Manager)
   container_secrets = var.container_secrets

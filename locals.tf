@@ -76,7 +76,7 @@ locals {
       value = var.environment
     },
     {
-      name  = "JAVA_OPTS"
+      name  = "JDK_JAVA_OPTIONS"
       value = local.java_opts_value
     }
   ]

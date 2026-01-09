@@ -58,13 +58,9 @@ module "quine_enterprise" {
   # Required: Container image - must be provided by the user
   container_image = var.container_image
 
-  # Environment variables built from Quine Enterprise configuration
-  container_environment = [
-    {
-      name  = "JDK_JAVA_OPTIONS"
-      value = local.jdk_java_options
-    }
-  ]
+  # Java options for Quine Enterprise (license configuration)
+  # The module automatically adds cluster-related Java options
+  java_opts = local.jdk_java_options
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"
@@ -73,5 +69,5 @@ module "quine_enterprise" {
   # - Uses default VPC and subnets
   # - 2048 CPU units (2 vCPU)
   # - 4096 MB memory (4 GB)
-  # - 1 task instance
+  # - 1 task instance (single-member cluster)
 }
