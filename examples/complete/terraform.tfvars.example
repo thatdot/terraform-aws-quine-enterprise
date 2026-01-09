@@ -9,7 +9,7 @@
 aws_region = "us-west-2"
 
 # Project Configuration
-project_name = "quine-prod"
+project_name = "quine-enterprise-complete"
 environment  = "prod"
 
 # Additional tags (optional)
