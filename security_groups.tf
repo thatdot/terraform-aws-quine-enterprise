@@ -98,3 +98,17 @@ resource "aws_security_group_rule" "ecs_tasks_egress" {
   security_group_id = aws_security_group.ecs_tasks.id
   description       = "Allow all outbound traffic"
 }
+
+# ECS tasks cluster port ingress - allow cluster communication between tasks
+# Only created when multi-member cluster mode is enabled
+resource "aws_security_group_rule" "ecs_tasks_cluster_ingress" {
+  count = local.is_multi_member_cluster ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = var.cluster_port
+  to_port                  = var.cluster_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_tasks.id
+  security_group_id        = aws_security_group.ecs_tasks.id
+  description              = "Allow Quine cluster communication between ECS tasks on port ${var.cluster_port}"
+}

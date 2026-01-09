@@ -198,6 +198,15 @@ See the [examples](./examples/) directory for complete usage examples:
 | `additional_task_role_policy_arns`      | Additional IAM policies for task role      | `list(string)` | `[]`            |
 | `additional_execution_role_policy_arns` | Additional IAM policies for execution role | `list(string)` | `[]`            |
 
+### Quine Enterprise Cluster
+
+| Name                               | Description                                                              | Type     | Default |
+| ---------------------------------- | ------------------------------------------------------------------------ | -------- | ------- |
+| `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `3`     |
+| `cluster_port`                     | Port for inter-node cluster communication (Pekko/Akka cluster)           | `number` | `25520` |
+| `service_discovery_namespace_name` | Private DNS namespace name (defaults to `{project_name}.local`)          | `string` | `null`  |
+| `java_opts`                        | Additional Java options to pass via JAVA_OPTS environment variable       | `string` | `""`    |
+
 ## Outputs
 
 ### Load Balancer
@@ -253,6 +262,19 @@ See the [examples](./examples/) directory for complete usage examples:
 | ------------ | ----------- |
 | `vpc_id`     | VPC ID      |
 | `subnet_ids` | Subnet IDs  |
+
+### Quine Enterprise Cluster
+
+| Name                                | Description                                              |
+| ----------------------------------- | -------------------------------------------------------- |
+| `cluster_target_size`               | Configured cluster target size                           |
+| `is_multi_member_cluster`           | Whether running in multi-member cluster mode             |
+| `service_discovery_namespace_id`    | AWS Cloud Map namespace ID (null if single-member)       |
+| `service_discovery_namespace_arn`   | AWS Cloud Map namespace ARN (null if single-member)      |
+| `service_discovery_namespace_name`  | AWS Cloud Map namespace name (null if single-member)     |
+| `service_discovery_seed_service_id` | AWS Cloud Map seed service ID (null if single-member)    |
+| `service_discovery_seed_service_arn`| AWS Cloud Map seed service ARN (null if single-member)   |
+| `seed_dns_name`                     | DNS name for cluster seed discovery (empty if single)    |
 
 ## Examples
 
@@ -331,6 +353,50 @@ resource "aws_route53_record" "quine_enterprise" {
     zone_id                = module.quine_enterprise.alb_zone_id
     evaluate_target_health = true
   }
+}
+```
+
+### Multi-Member Cluster
+
+Deploy a 3-member Quine Enterprise cluster with DNS-based service discovery for high availability:
+
+```hcl
+module "quine_enterprise" {
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+
+  project_name    = "quine-enterprise"
+  container_image = "your-registry/quine-enterprise:latest"
+
+  # Multi-member cluster configuration (default is 3)
+  cluster_target_size = 3
+
+  # Container sizing for production cluster
+  container_cpu    = 4096
+  container_memory = 8192
+
+  # Additional Java options for your workload
+  java_opts = "-Xms4g -Xmx6g -Dquine.webserver.address=0.0.0.0"
+
+  tags = {
+    Team = "platform"
+  }
+}
+
+output "seed_dns" {
+  description = "DNS name for cluster seed discovery"
+  value       = module.quine_enterprise.seed_dns_name
+}
+```
+
+For a single-member deployment (non-clustered), set `cluster_target_size = 1`:
+
+```hcl
+module "quine_enterprise" {
+  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+
+  project_name        = "quine-enterprise-dev"
+  container_image     = "your-registry/quine-enterprise:latest"
+  cluster_target_size = 1  # Single-member mode (no service discovery)
 }
 ```
 

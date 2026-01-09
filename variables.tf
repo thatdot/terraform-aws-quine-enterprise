@@ -338,3 +338,41 @@ variable "additional_execution_role_policy_arns" {
   type        = list(string)
   default     = []
 }
+
+# -----------------------------------------------------------------------------
+# Quine Enterprise Cluster Configuration
+# -----------------------------------------------------------------------------
+
+variable "cluster_target_size" {
+  description = "Target number of Quine Enterprise cluster members. When > 1, enables multi-member cluster mode with DNS-based service discovery for cluster join."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.cluster_target_size >= 1 && var.cluster_target_size <= 10
+    error_message = "Cluster target size must be between 1 and 10."
+  }
+}
+
+variable "cluster_port" {
+  description = "Port used for inter-node cluster communication (Pekko/Akka cluster)."
+  type        = number
+  default     = 25520
+
+  validation {
+    condition     = var.cluster_port >= 1 && var.cluster_port <= 65535
+    error_message = "Cluster port must be between 1 and 65535."
+  }
+}
+
+variable "service_discovery_namespace_name" {
+  description = "Name of the private DNS namespace for service discovery. Defaults to '{project_name}.local'."
+  type        = string
+  default     = null
+}
+
+variable "java_opts" {
+  description = "Additional Java options to pass to the Quine Enterprise container via JAVA_OPTS environment variable."
+  type        = string
+  default     = ""
+}

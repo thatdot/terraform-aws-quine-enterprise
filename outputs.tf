@@ -152,3 +152,51 @@ output "subnet_ids" {
   description = "Subnet IDs where resources are deployed"
   value       = local.subnet_ids
 }
+
+# -----------------------------------------------------------------------------
+# Cluster Configuration Outputs
+# -----------------------------------------------------------------------------
+
+output "cluster_target_size" {
+  description = "Configured Quine Enterprise cluster target size"
+  value       = var.cluster_target_size
+}
+
+output "is_multi_member_cluster" {
+  description = "Whether the deployment is running in multi-member cluster mode"
+  value       = local.is_multi_member_cluster
+}
+
+# -----------------------------------------------------------------------------
+# Service Discovery Outputs (Multi-Member Cluster Only)
+# -----------------------------------------------------------------------------
+
+output "service_discovery_namespace_id" {
+  description = "ID of the AWS Cloud Map private DNS namespace (null if single-member mode)"
+  value       = local.is_multi_member_cluster ? aws_service_discovery_private_dns_namespace.main[0].id : null
+}
+
+output "service_discovery_namespace_arn" {
+  description = "ARN of the AWS Cloud Map private DNS namespace (null if single-member mode)"
+  value       = local.is_multi_member_cluster ? aws_service_discovery_private_dns_namespace.main[0].arn : null
+}
+
+output "service_discovery_namespace_name" {
+  description = "Name of the AWS Cloud Map private DNS namespace (null if single-member mode)"
+  value       = local.is_multi_member_cluster ? local.service_discovery_namespace_name : null
+}
+
+output "service_discovery_seed_service_id" {
+  description = "ID of the AWS Cloud Map seed service for cluster discovery (null if single-member mode)"
+  value       = local.is_multi_member_cluster ? aws_service_discovery_service.seed[0].id : null
+}
+
+output "service_discovery_seed_service_arn" {
+  description = "ARN of the AWS Cloud Map seed service for cluster discovery (null if single-member mode)"
+  value       = local.is_multi_member_cluster ? aws_service_discovery_service.seed[0].arn : null
+}
+
+output "seed_dns_name" {
+  description = "DNS name used for Quine cluster seed discovery (empty if single-member mode)"
+  value       = local.seed_dns_name
+}
