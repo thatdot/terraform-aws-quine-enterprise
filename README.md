@@ -146,10 +146,10 @@ See the [examples](./examples/) directory for complete usage examples:
 
 ### ECS Service
 
-| Name            | Description                                             | Type     | Default |
-| --------------- | ------------------------------------------------------- | -------- | ------- |
-| `service_name`  | ECS service name (defaults to `{project_name}-service`) | `string` | `null`  |
-| `desired_count` | Number of ECS tasks (0-10)                              | `number` | `1`     |
+| Name            | Description                                                                          | Type     | Default |
+| --------------- | ------------------------------------------------------------------------------------ | -------- | ------- |
+| `service_name`  | ECS service name (defaults to `{project_name}-service`)                              | `string` | `null`  |
+| `desired_count` | Number of ECS tasks (0-10). Ignored when `cluster_target_size > 1` (uses that instead) | `number` | `1`     |
 
 ### Container
 
@@ -203,7 +203,8 @@ See the [examples](./examples/) directory for complete usage examples:
 | Name                               | Description                                                              | Type     | Default |
 | ---------------------------------- | ------------------------------------------------------------------------ | -------- | ------- |
 | `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `3`     |
-| `cluster_port`                     | Port for inter-node cluster communication (Pekko/Akka cluster)           | `number` | `25520` |
+| `cluster_port`                     | Port for Pekko remoting (inter-node communication after cluster formation) | `number` | `25520` |
+| `cluster_management_port`          | Port for Pekko cluster bootstrap HTTP discovery (contact point probing)  | `number` | `7626`  |
 | `service_discovery_namespace_name` | Private DNS namespace name (defaults to `{project_name}.local`)          | `string` | `null`  |
 | `java_opts`                        | Additional Java options to pass via JAVA_OPTS environment variable       | `string` | `""`    |
 

@@ -102,7 +102,7 @@ variable "service_name" {
 }
 
 variable "desired_count" {
-  description = "Desired number of ECS tasks to run."
+  description = "Desired number of ECS tasks to run. Note: This is ignored when cluster_target_size > 1 (multi-member mode uses cluster_target_size instead)."
   type        = number
   default     = 1
 

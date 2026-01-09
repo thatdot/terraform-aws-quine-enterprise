@@ -90,7 +90,7 @@ resource "aws_ecs_task_definition" "main" {
             containerPort = var.cluster_management_port
             hostPort      = var.cluster_management_port
             protocol      = "tcp"
-            name          = "management"
+            name          = "cluster-bootstrap"
           }
         ] : []
       )
