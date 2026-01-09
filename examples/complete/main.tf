@@ -166,6 +166,9 @@ module "quine_enterprise" {
   service_name  = var.service_name
   desired_count = var.desired_count
 
+  # Quine Enterprise cluster configuration (3-member cluster for HA)
+  cluster_target_size = 3
+
   # Container configuration
   container_name   = var.container_name
   container_image  = var.container_image

@@ -145,9 +145,7 @@ resource "aws_ecs_service" "main" {
   dynamic "service_registries" {
     for_each = local.is_multi_member_cluster ? [1] : []
     content {
-      registry_arn   = aws_service_discovery_service.seed[0].arn
-      container_name = var.container_name
-      container_port = var.cluster_port
+      registry_arn = aws_service_discovery_service.seed[0].arn
     }
   }
 
