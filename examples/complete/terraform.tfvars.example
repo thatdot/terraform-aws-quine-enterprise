@@ -81,7 +81,7 @@ license_server_uri = "https://license.thatdot.com" # License server URI
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------
 internal_alb      = false  # Set true for internal-only access
-health_check_path = "/api/v1/liveness"
+health_check_path = "/api/v1/admin/liveness"
 
 # Enable deletion protection in production (disabled by default for easier iteration)
 # enable_deletion_protection = true

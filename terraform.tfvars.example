@@ -14,4 +14,4 @@ container_memory = 4096
 desired_count    = 1
 
 # Health Check
-health_check_path = "/api/v1/liveness"
+health_check_path = "/api/v1/admin/liveness"

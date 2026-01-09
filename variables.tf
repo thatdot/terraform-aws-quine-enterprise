@@ -201,7 +201,7 @@ variable "internal_alb" {
 variable "health_check_path" {
   description = "Health check path for the ALB target group."
   type        = string
-  default     = "/api/v1/liveness"
+  default     = "/api/v1/admin/liveness"
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
