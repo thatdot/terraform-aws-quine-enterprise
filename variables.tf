@@ -355,13 +355,24 @@ variable "cluster_target_size" {
 }
 
 variable "cluster_port" {
-  description = "Port used for inter-node cluster communication (Pekko/Akka cluster)."
+  description = "Port used for inter-node cluster communication (Pekko/Akka remoting after cluster formation)."
   type        = number
   default     = 25520
 
   validation {
     condition     = var.cluster_port >= 1 && var.cluster_port <= 65535
     error_message = "Cluster port must be between 1 and 65535."
+  }
+}
+
+variable "cluster_management_port" {
+  description = "Port used for Pekko/Akka cluster bootstrap HTTP-based contact point discovery. This port is probed during the initial cluster formation phase before remoting on cluster_port is established."
+  type        = number
+  default     = 7626
+
+  validation {
+    condition     = var.cluster_management_port >= 1 && var.cluster_management_port <= 65535
+    error_message = "Cluster management port must be between 1 and 65535."
   }
 }
 

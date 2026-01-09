@@ -66,8 +66,10 @@ resource "aws_ecs_task_definition" "main" {
       memory    = var.container_memory
       essential = true
 
-      # Port mappings include both the container port (for HTTP) and optionally
-      # the cluster port (for inter-node communication in multi-member mode)
+      # Port mappings include the container port (for HTTP API) and optionally
+      # cluster ports for multi-member mode:
+      # - cluster_port (25520): Pekko/Akka remoting after cluster formation
+      # - cluster_management_port (7626): HTTP-based bootstrap contact point discovery
       portMappings = concat(
         [
           {
@@ -83,6 +85,12 @@ resource "aws_ecs_task_definition" "main" {
             hostPort      = var.cluster_port
             protocol      = "tcp"
             name          = "cluster"
+          },
+          {
+            containerPort = var.cluster_management_port
+            hostPort      = var.cluster_management_port
+            protocol      = "tcp"
+            name          = "management"
           }
         ] : []
       )
@@ -142,10 +150,18 @@ resource "aws_ecs_service" "main" {
 
   # Service discovery registration for multi-member cluster mode
   # This registers ECS tasks with AWS Cloud Map for DNS-based discovery
+  # The container_name and container_port are REQUIRED for SRV records to work
+  #
+  # IMPORTANT: SRV records must advertise port 7626 (management port), NOT port 25520!
+  # Pekko cluster bootstrap uses HTTP-based contact point discovery on the management port
+  # to probe /bootstrap/seed-nodes. Only after the bootstrap phase does remoting on port
+  # 25520 begin. The bootstrap phase MUST succeed first for the cluster to form.
   dynamic "service_registries" {
     for_each = local.is_multi_member_cluster ? [1] : []
     content {
-      registry_arn = aws_service_discovery_service.seed[0].arn
+      registry_arn   = aws_service_discovery_service.seed[0].arn
+      container_name = var.container_name
+      container_port = var.cluster_management_port
     }
   }
 

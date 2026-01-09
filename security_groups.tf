@@ -101,6 +101,7 @@ resource "aws_security_group_rule" "ecs_tasks_egress" {
 
 # ECS tasks cluster port ingress - allow cluster communication between tasks
 # Only created when multi-member cluster mode is enabled
+# Port 25520 (default) is used for Pekko/Akka remoting after cluster formation
 resource "aws_security_group_rule" "ecs_tasks_cluster_ingress" {
   count = local.is_multi_member_cluster ? 1 : 0
 
@@ -110,5 +111,21 @@ resource "aws_security_group_rule" "ecs_tasks_cluster_ingress" {
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.ecs_tasks.id
   security_group_id        = aws_security_group.ecs_tasks.id
-  description              = "Allow Quine cluster communication between ECS tasks on port ${var.cluster_port}"
+  description              = "Allow Quine cluster remoting between ECS tasks on port ${var.cluster_port}"
+}
+
+# ECS tasks cluster management port ingress - allow bootstrap HTTP probing between tasks
+# Only created when multi-member cluster mode is enabled
+# Port 7626 (default) is used for Pekko cluster bootstrap HTTP-based contact point discovery
+# This port is probed during the initial cluster formation phase BEFORE remoting is established
+resource "aws_security_group_rule" "ecs_tasks_cluster_management_ingress" {
+  count = local.is_multi_member_cluster ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = var.cluster_management_port
+  to_port                  = var.cluster_management_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_tasks.id
+  security_group_id        = aws_security_group.ecs_tasks.id
+  description              = "Allow Pekko cluster bootstrap HTTP probing between ECS tasks on port ${var.cluster_management_port}"
 }

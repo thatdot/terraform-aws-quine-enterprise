@@ -43,6 +43,15 @@ resource "aws_service_discovery_service" "seed" {
       type = "A"
     }
 
+    # SRV records return IP addresses AND ports for each task
+    # This is critical for Pekko cluster bootstrap to find the management port (7626)
+    # which is used for HTTP-based contact point discovery during cluster formation.
+    # The SRV port is configured in the ECS service_registries block.
+    dns_records {
+      ttl  = 10
+      type = "SRV"
+    }
+
     # MULTIVALUE routing returns all healthy instances
     # This is similar to Kubernetes headless service behavior
     routing_policy = "MULTIVALUE"
