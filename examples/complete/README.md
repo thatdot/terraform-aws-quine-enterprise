@@ -1,21 +1,38 @@
 # Complete Example
 
-Production-ready deployment of Quine on AWS ECS Fargate with HTTPS and custom domain support.
+Production-ready deployment of Quine Enterprise on AWS ECS Fargate with HTTPS and custom domain support.
 
 ## Prerequisites
 
 - AWS CLI configured with credentials
 - Terraform >= 1.5.0
 - Route53 hosted zone for your domain (for HTTPS)
+- Quine Enterprise container image (from your registry or ECR)
+- Quine Enterprise license key
 
 ## Quick Start
 
-1. Create `terraform.tfvars`:
+1. Copy the example tfvars file:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+2. Edit `terraform.tfvars` with your required values:
 
 ```hcl
-project_name   = "quine-prod"
+# Project configuration
+project_name = "quine-enterprise-prod"
+
+# Container image (required)
+container_image = "your-registry/quine-enterprise:latest"
+
+# Quine Enterprise license (required)
+license_key        = "YOUR_LICENSE_KEY"
+
+# HTTPS configuration (optional but recommended)
 enable_https   = true
-domain_name    = "quine.example.com"
+domain_name    = "quine-enterprise.example.com"
 hosted_zone_id = "Z0123456789ABCDEFGHIJ"
 ```
 
@@ -24,7 +41,7 @@ To find your hosted zone ID:
 aws route53 list-hosted-zones --query "HostedZones[?Name=='example.com.'].Id" --output text
 ```
 
-2. Deploy:
+3. Deploy:
 
 ```bash
 terraform init
@@ -32,7 +49,7 @@ terraform plan
 terraform apply
 ```
 
-3. Access Quine at `https://quine.example.com`
+4. Access Quine Enterprise at `https://quine-enterprise.example.com`
 
 ## Configuration Options
 
@@ -59,7 +76,7 @@ Note: If you enabled `enable_deletion_protection = true`, disable it first via A
 ## What Gets Created
 
 - ECS Fargate cluster with Container Insights
-- ECS service running 1 Quine container (4 vCPU, 8 GB)
+- ECS service running 1 Quine Enterprise container (4 vCPU, 8 GB)
 - Internet-facing ALB with HTTPS
 - ACM certificate (if using automatic option)
 - Route53 alias record for custom domain
@@ -67,11 +84,11 @@ Note: If you enabled `enable_deletion_protection = true`, disable it first via A
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| url | URL to access Quine |
-| certificate_arn | ACM certificate ARN |
-| alb_dns_name | ALB DNS name |
-| ecs_cluster_name | ECS cluster name |
-| ecs_service_name | ECS service name |
-| cloudwatch_log_group | CloudWatch log group |
+| Name                 | Description                    |
+| -------------------- | ------------------------------ |
+| url                  | URL to access Quine Enterprise |
+| certificate_arn      | ACM certificate ARN            |
+| alb_dns_name         | ALB DNS name                   |
+| ecs_cluster_name     | ECS cluster name               |
+| ecs_service_name     | ECS service name               |
+| cloudwatch_log_group | CloudWatch log group           |
