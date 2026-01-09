@@ -26,24 +26,75 @@ locals {
       Project     = var.project_name
       Environment = var.environment
       ManagedBy   = "Terraform"
-      Module      = "terraform-aws-thatdot"
+      Module      = "terraform-aws-quine-enterprise"
     },
     var.tags
   )
 
-  # Container environment variables - merge default with user-provided
+  # Get current AWS region from provider for log configuration
+  # This uses a data source since we can't use var.aws_region anymore (provider config is in root module)
+  aws_region = data.aws_region.current.name
+
+  # -----------------------------------------------------------------------------
+  # Quine Enterprise Cluster Configuration
+  # -----------------------------------------------------------------------------
+
+  # Determine if multi-member cluster mode is enabled
+  is_multi_member_cluster = var.cluster_target_size > 1
+
+  # Service discovery namespace name
+  service_discovery_namespace_name = var.service_discovery_namespace_name != null ? var.service_discovery_namespace_name : "${var.project_name}.local"
+
+  # Service discovery seed service name (used for cluster join DNS)
+  seed_service_name = "${var.project_name}-seed"
+
+  # Full DNS name for the seed service (used by QUINE_SEED_DNS)
+  # Format: {seed_service_name}.{namespace_name}
+  seed_dns_name = local.is_multi_member_cluster ? "${local.seed_service_name}.${local.service_discovery_namespace_name}" : ""
+
+  # Base Java options for Quine cluster configuration
+  # Always include target-size
+  cluster_java_opts_base = "-Dquine.cluster.target-size=${var.cluster_target_size}"
+
+  # Additional Java options for multi-member clusters
+  cluster_java_opts_multi_member = local.is_multi_member_cluster ? " -Dquine.cluster.cluster-join.type=dns-entry" : ""
+
+  # Combined cluster Java options
+  cluster_java_opts = "${local.cluster_java_opts_base}${local.cluster_java_opts_multi_member}"
+
+  # Full JAVA_OPTS combining user-provided and cluster options
+  java_opts_value = trimspace("${var.java_opts} ${local.cluster_java_opts}")
+
+  # -----------------------------------------------------------------------------
+  # Container Environment Variables
+  # -----------------------------------------------------------------------------
+
+  # Default environment variables
   default_environment = [
     {
       name  = "ENVIRONMENT"
       value = var.environment
+    },
+    {
+      name  = "JDK_JAVA_OPTIONS"
+      value = local.java_opts_value
     }
   ]
 
-  container_environment = concat(local.default_environment, var.container_environment)
+  # Seed DNS environment variable (only for multi-member clusters)
+  seed_dns_environment = local.is_multi_member_cluster ? [
+    {
+      name  = "QUINE_SEED_DNS"
+      value = local.seed_dns_name
+    }
+  ] : []
 
-  # Get current AWS region from provider for log configuration
-  # This uses a data source since we can't use var.aws_region anymore (provider config is in root module)
-  aws_region = data.aws_region.current.name
+  # Combined container environment
+  container_environment = concat(
+    local.default_environment,
+    local.seed_dns_environment,
+    var.container_environment
+  )
 }
 
 # -----------------------------------------------------------------------------

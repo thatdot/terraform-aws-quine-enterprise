@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Variables for Complete Example
 # -----------------------------------------------------------------------------
-# These variables allow full customization of the Quine deployment.
+# These variables allow full customization of the Quine Enterprise deployment.
 # Copy terraform.tfvars.example to terraform.tfvars and customize.
 # -----------------------------------------------------------------------------
 
@@ -109,13 +109,12 @@ variable "desired_count" {
 variable "container_name" {
   description = "Container name"
   type        = string
-  default     = "quine"
+  default     = "quine-enterprise"
 }
 
 variable "container_image" {
-  description = "Docker image"
+  description = "Docker image to run in the ECS task. This is required and must be provided by the user."
   type        = string
-  default     = "thatdot/quine:latest"
 }
 
 variable "container_port" {
@@ -136,13 +135,20 @@ variable "container_memory" {
   default     = 8192
 }
 
-variable "container_environment" {
-  description = "Environment variables"
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default = []
+# -----------------------------------------------------------------------------
+# Quine Enterprise Configuration
+# -----------------------------------------------------------------------------
+
+variable "license_key" {
+  description = "Quine Enterprise license key."
+  type        = string
+  sensitive   = true
+}
+
+variable "license_server_uri" {
+  description = "Quine Enterprise license server URI."
+  type        = string
+  default     = "https://license-server.dev.thatdot.com"
 }
 
 variable "container_secrets" {
@@ -167,7 +173,7 @@ variable "internal_alb" {
 variable "health_check_path" {
   description = "Health check path"
   type        = string
-  default     = "/api/v1/liveness"
+  default     = "/api/v1/admin/liveness"
 }
 
 variable "health_check_interval" {

@@ -66,13 +66,34 @@ resource "aws_ecs_task_definition" "main" {
       memory    = var.container_memory
       essential = true
 
-      portMappings = [
-        {
-          containerPort = var.container_port
-          hostPort      = var.container_port
-          protocol      = "tcp"
-        }
-      ]
+      # Port mappings include the container port (for HTTP API) and optionally
+      # cluster ports for multi-member mode:
+      # - cluster_port (25520): Pekko/Akka remoting after cluster formation
+      # - cluster_management_port (7626): HTTP-based bootstrap contact point discovery
+      portMappings = concat(
+        [
+          {
+            containerPort = var.container_port
+            hostPort      = var.container_port
+            protocol      = "tcp"
+            name          = "http"
+          }
+        ],
+        local.is_multi_member_cluster ? [
+          {
+            containerPort = var.cluster_port
+            hostPort      = var.cluster_port
+            protocol      = "tcp"
+            name          = "cluster"
+          },
+          {
+            containerPort = var.cluster_management_port
+            hostPort      = var.cluster_management_port
+            protocol      = "tcp"
+            name          = "cluster-bootstrap"
+          }
+        ] : []
+      )
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -110,8 +131,10 @@ resource "aws_ecs_service" "main" {
   name            = local.service_name
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  # Use cluster_target_size as the desired count when in multi-member mode,
+  # otherwise fall back to the user-specified desired_count
+  desired_count = local.is_multi_member_cluster ? var.cluster_target_size : var.desired_count
+  launch_type   = "FARGATE"
 
   network_configuration {
     subnets          = local.subnet_ids
@@ -123,6 +146,23 @@ resource "aws_ecs_service" "main" {
     target_group_arn = aws_lb_target_group.main.arn
     container_name   = var.container_name
     container_port   = var.container_port
+  }
+
+  # Service discovery registration for multi-member cluster mode
+  # This registers ECS tasks with AWS Cloud Map for DNS-based discovery
+  # The container_name and container_port are REQUIRED for SRV records to work
+  #
+  # IMPORTANT: SRV records must advertise port 7626 (management port), NOT port 25520!
+  # Pekko cluster bootstrap uses HTTP-based contact point discovery on the management port
+  # to probe /bootstrap/seed-nodes. Only after the bootstrap phase does remoting on port
+  # 25520 begin. The bootstrap phase MUST succeed first for the cluster to form.
+  dynamic "service_registries" {
+    for_each = local.is_multi_member_cluster ? [1] : []
+    content {
+      registry_arn   = aws_service_discovery_service.seed[0].arn
+      container_name = var.container_name
+      container_port = var.cluster_management_port
+    }
   }
 
   # Ensure the ALB listener is created before the service
@@ -138,8 +178,10 @@ resource "aws_ecs_service" "main" {
   }
 
   # Deployment configuration
+  # For multi-member clusters, we need to be more careful with rolling updates
+  # to maintain cluster quorum during deployments
   deployment_maximum_percent         = 200
-  deployment_minimum_healthy_percent = 100
+  deployment_minimum_healthy_percent = local.is_multi_member_cluster ? 66 : 100
 
   # Propagate tags to tasks
   propagate_tags = "SERVICE"

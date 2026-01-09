@@ -1,15 +1,16 @@
 # -----------------------------------------------------------------------------
-# Basic Example - Quine on ECS Fargate
+# Basic Example - Quine Enterprise on ECS Fargate
 # -----------------------------------------------------------------------------
-# This example demonstrates the simplest deployment of Quine using the module
-# with minimal configuration. It uses the default VPC and sensible defaults.
+# This example demonstrates the simplest deployment of Quine Enterprise using
+# the module with minimal configuration. It uses the default VPC and sensible
+# defaults.
 #
 # Usage:
 #   terraform init
 #   terraform plan
 #   terraform apply
 #
-# After deployment, access Quine at the URL shown in the outputs.
+# After deployment, access Quine Enterprise at the URL shown in the outputs.
 # -----------------------------------------------------------------------------
 
 terraform {
@@ -36,12 +37,30 @@ provider "aws" {
   }
 }
 
-# Deploy Quine using the module
-module "quine" {
+# -----------------------------------------------------------------------------
+# Locals - Build JDK_JAVA_OPTIONS from variables
+# -----------------------------------------------------------------------------
+
+locals {
+  jdk_java_options = join(" ", [
+    "-Dquine.license-key=${var.license_key}",
+    "-Dquine.license-server-uri=${var.license_server_uri}",
+  ])
+}
+
+# Deploy Quine Enterprise using the module
+module "quine_enterprise" {
   source = "../../"
 
   # Required: Project name for resource naming
-  project_name = "quine-basic"
+  project_name = "quine-enterprise-basic"
+
+  # Required: Container image - must be provided by the user
+  container_image = var.container_image
+
+  # Java options for Quine Enterprise (license configuration)
+  # The module automatically adds cluster-related Java options
+  java_opts = local.jdk_java_options
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"
@@ -50,6 +69,5 @@ module "quine" {
   # - Uses default VPC and subnets
   # - 2048 CPU units (2 vCPU)
   # - 4096 MB memory (4 GB)
-  # - 1 task instance
-  # - thatdot/quine:latest image
+  # - 1 task instance (single-member cluster)
 }

@@ -9,7 +9,7 @@
 aws_region = "us-west-2"
 
 # Project Configuration
-project_name = "quine-prod"
+project_name = "quine-enterprise-complete"
 environment  = "prod"
 
 # Additional tags (optional)
@@ -52,8 +52,8 @@ enable_container_insights = true
 # -----------------------------------------------------------------------------
 # Container Configuration
 # -----------------------------------------------------------------------------
-container_name  = "quine"
-container_image = "thatdot/quine:latest"
+container_name  = "quine-enterprise"
+container_image = "your-registry/quine-enterprise:latest"  # Required - provide your Quine Enterprise image
 container_port  = 8080
 
 # Fargate CPU/Memory (see AWS Fargate pricing for valid combinations)
@@ -61,17 +61,9 @@ container_port  = 8080
 container_cpu    = 4096   # 4 vCPU
 container_memory = 8192   # 8 GB
 
-# Environment variables (optional)
-container_environment = [
-  {
-    name  = "JAVA_OPTS"
-    value = "-Xms4g -Xmx6g"
-  },
-  {
-    name  = "QUINE_WEBSERVER_ADDRESS"
-    value = "0.0.0.0"
-  }
-]
+# Quine Enterprise Configuration
+license_key        = ""                                       # Required - your Quine Enterprise license key
+license_server_uri = "https://license.thatdot.com" # License server URI
 
 # Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
 # container_secrets = [
@@ -89,7 +81,7 @@ container_environment = [
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------
 internal_alb      = false  # Set true for internal-only access
-health_check_path = "/api/v1/liveness"
+health_check_path = "/api/v1/admin/liveness"
 
 # Enable deletion protection in production (disabled by default for easier iteration)
 # enable_deletion_protection = true

@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
-# Complete Example - Quine on ECS Fargate with Custom VPC and HTTPS
+# Complete Example - Quine Enterprise on ECS Fargate with Custom VPC and HTTPS
 # -----------------------------------------------------------------------------
-# This example demonstrates a production-ready deployment of Quine with:
+# This example demonstrates a production-ready deployment of Quine Enterprise with:
 # - Custom VPC and subnets
 # - HTTPS with ACM certificate
 # - Custom container configuration
@@ -84,6 +84,12 @@ locals {
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : (
     local.create_certificate ? aws_acm_certificate.this[0].arn : null
   )
+
+  # Build JDK_JAVA_OPTIONS from Quine Enterprise configuration variables
+  jdk_java_options = join(" ", [
+    "-Dquine.license-key=${var.license_key}",
+    "-Dquine.license-server-uri=${var.license_server_uri}",
+  ])
 }
 
 # -----------------------------------------------------------------------------
@@ -135,7 +141,7 @@ resource "aws_acm_certificate_validation" "this" {
 # Module Deployment
 # -----------------------------------------------------------------------------
 
-module "quine" {
+module "quine_enterprise" {
   source = "../../"
 
   # Project identification
@@ -160,6 +166,9 @@ module "quine" {
   service_name  = var.service_name
   desired_count = var.desired_count
 
+  # Quine Enterprise cluster configuration (3-member cluster for HA)
+  cluster_target_size = 3
+
   # Container configuration
   container_name   = var.container_name
   container_image  = var.container_image
@@ -167,8 +176,9 @@ module "quine" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # Environment variables
-  container_environment = var.container_environment
+  # Java options for Quine Enterprise (license configuration)
+  # The module automatically adds cluster-related Java options
+  java_opts = local.jdk_java_options
 
   # Secrets (from SSM Parameter Store or Secrets Manager)
   container_secrets = var.container_secrets
@@ -214,8 +224,8 @@ resource "aws_route53_record" "alb_alias" {
   type    = "A"
 
   alias {
-    name                   = module.quine.alb_dns_name
-    zone_id                = module.quine.alb_zone_id
+    name                   = module.quine_enterprise.alb_dns_name
+    zone_id                = module.quine_enterprise.alb_zone_id
     evaluate_target_health = true
   }
 }

@@ -102,7 +102,7 @@ variable "service_name" {
 }
 
 variable "desired_count" {
-  description = "Desired number of ECS tasks to run."
+  description = "Desired number of ECS tasks to run. Note: This is ignored when cluster_target_size > 1 (multi-member mode uses cluster_target_size instead)."
   type        = number
   default     = 1
 
@@ -119,7 +119,7 @@ variable "desired_count" {
 variable "container_name" {
   description = "Name of the container within the task definition."
   type        = string
-  default     = "quine"
+  default     = "quine-enterprise"
 
   validation {
     condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_-]{0,254}$", var.container_name))
@@ -128,9 +128,8 @@ variable "container_name" {
 }
 
 variable "container_image" {
-  description = "Docker image to run in the ECS task (e.g., 'thatdot/quine:latest' or 'ECR_URI:tag')."
+  description = "Docker image to run in the ECS task. This is required and must be provided by the user (e.g., 'your-repo/quine-enterprise:tag' or 'ECR_URI:tag')."
   type        = string
-  default     = "thatdot/quine:latest"
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$", var.container_image)) || can(regex("^[0-9]+\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/", var.container_image))
@@ -202,7 +201,7 @@ variable "internal_alb" {
 variable "health_check_path" {
   description = "Health check path for the ALB target group."
   type        = string
-  default     = "/api/v1/liveness"
+  default     = "/api/v1/admin/liveness"
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
@@ -338,4 +337,53 @@ variable "additional_execution_role_policy_arns" {
   description = "List of additional IAM policy ARNs to attach to the ECS task execution role."
   type        = list(string)
   default     = []
+}
+
+# -----------------------------------------------------------------------------
+# Quine Enterprise Cluster Configuration
+# -----------------------------------------------------------------------------
+
+variable "cluster_target_size" {
+  description = "Target number of Quine Enterprise cluster members. When > 1, enables multi-member cluster mode with DNS-based service discovery for cluster join."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.cluster_target_size >= 1 && var.cluster_target_size <= 10
+    error_message = "Cluster target size must be between 1 and 10."
+  }
+}
+
+variable "cluster_port" {
+  description = "Port used for inter-node cluster communication (Pekko/Akka remoting after cluster formation)."
+  type        = number
+  default     = 25520
+
+  validation {
+    condition     = var.cluster_port >= 1 && var.cluster_port <= 65535
+    error_message = "Cluster port must be between 1 and 65535."
+  }
+}
+
+variable "cluster_management_port" {
+  description = "Port used for Pekko/Akka cluster bootstrap HTTP-based contact point discovery. This port is probed during the initial cluster formation phase before remoting on cluster_port is established."
+  type        = number
+  default     = 7626
+
+  validation {
+    condition     = var.cluster_management_port >= 1 && var.cluster_management_port <= 65535
+    error_message = "Cluster management port must be between 1 and 65535."
+  }
+}
+
+variable "service_discovery_namespace_name" {
+  description = "Name of the private DNS namespace for service discovery. Defaults to '{project_name}.local'."
+  type        = string
+  default     = null
+}
+
+variable "java_opts" {
+  description = "Additional Java options to pass to the Quine Enterprise container via JAVA_OPTS environment variable."
+  type        = string
+  default     = ""
 }
