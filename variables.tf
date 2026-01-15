@@ -387,3 +387,9 @@ variable "java_opts" {
   type        = string
   default     = ""
 }
+
+variable "test_variable" {
+  description = "adding to test CI"
+  type        = string
+  default     = ""
+}
