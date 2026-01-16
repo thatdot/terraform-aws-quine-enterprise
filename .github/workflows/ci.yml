@@ -1,6 +1,5 @@
 # Validates the module works with AWS
-# - Plan: runs on every PR for fast feedback
-# - Apply + Destroy: runs daily on schedule
+# Runs plan, apply, and destroy on every PR, merge to main, and daily schedule
 name: CI
 
 on:
@@ -16,16 +15,22 @@ permissions:
   id-token: write
   contents: read
 
+# Prevent concurrent runs from conflicting on Terraform state
+# Static group ensures only one run at a time across all PRs/branches
+concurrency:
+  group: terraform-ci
+  cancel-in-progress: false
+
 env:
   TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
   TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
   TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
 
 jobs:
-  plan:
-    name: Terraform Plan
+  test:
+    name: Plan + Apply + Destroy
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule'
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,37 +59,6 @@ jobs:
       - name: Terraform Plan
         working-directory: ci
         run: terraform plan -input=false
-
-  integration:
-    name: Apply + Destroy
-    runs-on: ubuntu-latest
-    # TODO: Remove 'pull_request' before merge - temporary for testing
-    if: github.event_name == 'schedule' || github.event_name == 'pull_request'
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.0
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-west-2
-
-      - name: Terraform Init
-        working-directory: ci
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.STATE_BUCKET }}" \
-            -backend-config="key=${{ secrets.STATE_KEY }}" \
-            -backend-config="region=us-west-2" \
-            -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
-            -backend-config="encrypt=true"
 
       - name: Terraform Apply
         working-directory: ci
