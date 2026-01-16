@@ -61,6 +61,11 @@ jobs:
             -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
             -backend-config="encrypt=true"
 
+      - name: Test Slack Notification
+        run: |
+          echo "Testing Slack failure notification..."
+          exit 1
+
       - name: Terraform Plan
         run: terraform plan -input=false
 
