@@ -1,0 +1,84 @@
+# Validates the basic example works with AWS
+# - Plan: runs on every PR for fast feedback
+# - Apply + Destroy: runs daily on schedule
+name: Basic Example
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
+  TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
+  TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Terraform Init
+        working-directory: examples/basic
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: examples/basic
+        run: terraform plan -input=false
+
+  integration:
+    name: Apply + Destroy
+    runs-on: ubuntu-latest
+    # TODO: Remove 'pull_request' before merge - temporary for testing
+    if: github.event_name == 'schedule' || github.event_name == 'pull_request'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Terraform Init
+        working-directory: examples/basic
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: examples/basic
+        run: terraform apply -auto-approve -input=false
+
+      - name: Terraform Destroy
+        working-directory: examples/basic
+        if: always()
+        run: terraform destroy -auto-approve -input=false
