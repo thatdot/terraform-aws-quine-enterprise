@@ -31,7 +31,7 @@ variable "license_server_uri" {
 module "quine_enterprise" {
   source = "../"
 
-  project_name    = "quine-ci-test"
+  project_name    = "thatdot-terraform-ci-quine-enterprise"
   container_image = var.container_image
   desired_count   = 3
 
