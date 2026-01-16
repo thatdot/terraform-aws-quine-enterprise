@@ -1,7 +1,7 @@
-# Validates the basic example works with AWS
+# Validates the module works with AWS
 # - Plan: runs on every PR for fast feedback
 # - Apply + Destroy: runs daily on schedule
-name: Basic Example
+name: CI
 
 on:
   push:
@@ -42,11 +42,17 @@ jobs:
           aws-region: us-west-2
 
       - name: Terraform Init
-        working-directory: examples/basic
-        run: terraform init
+        working-directory: ci
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.STATE_BUCKET }}" \
+            -backend-config="key=${{ secrets.STATE_KEY }}" \
+            -backend-config="region=us-west-2" \
+            -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
 
       - name: Terraform Plan
-        working-directory: examples/basic
+        working-directory: ci
         run: terraform plan -input=false
 
   integration:
@@ -71,14 +77,20 @@ jobs:
           aws-region: us-west-2
 
       - name: Terraform Init
-        working-directory: examples/basic
-        run: terraform init
+        working-directory: ci
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.STATE_BUCKET }}" \
+            -backend-config="key=${{ secrets.STATE_KEY }}" \
+            -backend-config="region=us-west-2" \
+            -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
 
       - name: Terraform Apply
-        working-directory: examples/basic
+        working-directory: ci
         run: terraform apply -auto-approve -input=false
 
       - name: Terraform Destroy
-        working-directory: examples/basic
+        working-directory: ci
         if: always()
         run: terraform destroy -auto-approve -input=false
