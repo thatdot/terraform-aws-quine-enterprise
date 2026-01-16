@@ -31,9 +31,9 @@ variable "license_server_uri" {
 module "quine_enterprise" {
   source = "../"
 
-  project_name    = "thatdot-terraform-ci-qe"
-  container_image = var.container_image
-  desired_count   = 3
+  project_name        = "thatdot-terraform-ci-qe"
+  container_image     = var.container_image
+  cluster_target_size = 3
 
   java_opts = join(" ", [
     "-Dquine.license-key=${var.license_key}",
