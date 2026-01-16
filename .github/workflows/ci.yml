@@ -1,5 +1,5 @@
 # Validates the module works with AWS
-# Runs plan, apply, and destroy on every PR, merge to main, and daily schedule
+# Runs plan, apply, verify, and destroy on every PR, merge to main, and daily schedule
 name: CI
 
 on:
@@ -22,15 +22,19 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  AWS_REGION: us-west-2
   TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
   TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
   TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
 
 jobs:
   test:
-    name: Plan + Apply + Destroy
+    name: Plan + Apply + Verify + Destroy
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,35 +50,33 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-west-2
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        working-directory: ci
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.STATE_BUCKET }}" \
             -backend-config="key=${{ secrets.STATE_KEY }}" \
-            -backend-config="region=us-west-2" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
             -backend-config="encrypt=true"
 
       - name: Terraform Plan
-        working-directory: ci
         run: terraform plan -input=false
 
       - name: Terraform Apply
-        working-directory: ci
         run: terraform apply -auto-approve -input=false
 
       - name: Get Terraform Outputs
         id: tf-outputs
-        working-directory: ci
         run: |
           echo "alb_url=$(terraform output -raw alb_url)" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
           echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+          echo "cluster_target_size=$(terraform output -raw cluster_target_size)" >> $GITHUB_OUTPUT
 
       - name: Wait for ECS Service Healthy
+        working-directory: .
         run: |
           echo "Waiting for ECS service to stabilize..."
           aws ecs wait services-stable \
@@ -83,9 +85,10 @@ jobs:
           echo "ECS service is stable!"
 
       - name: Verify Cluster Fully Up
+        working-directory: .
         run: |
           ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
-          EXPECTED_MEMBERS=3
+          EXPECTED_MEMBERS="${{ steps.tf-outputs.outputs.cluster_target_size }}"
           echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
           echo "Expected cluster members: $EXPECTED_MEMBERS"
 
@@ -111,6 +114,5 @@ jobs:
           exit 1
 
       - name: Terraform Destroy
-        working-directory: ci
         if: always()
         run: terraform destroy -auto-approve -input=false

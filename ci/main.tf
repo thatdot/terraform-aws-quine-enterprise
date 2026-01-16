@@ -52,3 +52,7 @@ output "ecs_cluster_name" {
 output "ecs_service_name" {
   value = module.quine_enterprise.ecs_service_name
 }
+
+output "cluster_target_size" {
+  value = module.quine_enterprise.cluster_target_size
+}
