@@ -85,25 +85,29 @@ jobs:
       - name: Verify Cluster Fully Up
         run: |
           ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
+          EXPECTED_MEMBERS=3
           echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
+          echo "Expected cluster members: $EXPECTED_MEMBERS"
 
-          # Poll until fullyUp=true or timeout
+          # Poll until fullyUp=true and all members joined, or timeout
           for i in {1..30}; do
             RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
+            MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '.clusterMembers | keys | length // 0')
 
-            if [ "$FULLY_UP" = "true" ]; then
-              echo "Cluster is fully up!"
+            if [ "$FULLY_UP" = "true" ] && [ "$MEMBER_COUNT" = "$EXPECTED_MEMBERS" ]; then
+              echo "Cluster is fully up with $MEMBER_COUNT members!"
               echo "$RESPONSE" | jq .
               exit 0
             fi
 
-            echo "Attempt $i: fullyUp=$FULLY_UP, waiting..."
-            echo "$RESPONSE" | jq . 2>/dev/null || echo "$RESPONSE"
+            echo "Attempt $i: fullyUp=$FULLY_UP, members=$MEMBER_COUNT/$EXPECTED_MEMBERS, waiting..."
             sleep 10
           done
 
-          echo "Cluster did not become fully up after 30 attempts"
+          echo "Cluster verification failed after 30 attempts"
+          echo "Final response:"
+          echo "$RESPONSE" | jq .
           exit 1
 
       - name: Terraform Destroy
