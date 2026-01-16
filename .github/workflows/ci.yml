@@ -93,7 +93,7 @@ jobs:
           for i in {1..30}; do
             RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
-            MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.clusterMembers // {}) | keys | length')
+            MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
 
             if [ "$FULLY_UP" = "true" ] && [ "$MEMBER_COUNT" = "$EXPECTED_MEMBERS" ]; then
               echo "Cluster is fully up with $MEMBER_COUNT members!"
