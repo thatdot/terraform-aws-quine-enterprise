@@ -40,3 +40,15 @@ module "quine_enterprise" {
     "-Dquine.license-server-uri=${var.license_server_uri}",
   ])
 }
+
+output "alb_url" {
+  value = module.quine_enterprise.alb_url
+}
+
+output "ecs_cluster_name" {
+  value = module.quine_enterprise.ecs_cluster_name
+}
+
+output "ecs_service_name" {
+  value = module.quine_enterprise.ecs_service_name
+}
