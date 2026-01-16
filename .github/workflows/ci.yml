@@ -64,6 +64,46 @@ jobs:
         working-directory: ci
         run: terraform apply -auto-approve -input=false
 
+      - name: Get Terraform Outputs
+        id: tf-outputs
+        working-directory: ci
+        run: |
+          echo "alb_url=$(terraform output -raw alb_url)" >> $GITHUB_OUTPUT
+          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+
+      - name: Wait for ECS Service Healthy
+        run: |
+          echo "Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster ${{ steps.tf-outputs.outputs.ecs_cluster_name }} \
+            --services ${{ steps.tf-outputs.outputs.ecs_service_name }}
+          echo "ECS service is stable!"
+
+      - name: Verify Cluster Fully Up
+        run: |
+          ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
+          echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
+
+          # Poll until fullyUp=true or timeout
+          for i in {1..30}; do
+            RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
+            FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
+
+            if [ "$FULLY_UP" = "true" ]; then
+              echo "Cluster is fully up!"
+              echo "$RESPONSE" | jq .
+              exit 0
+            fi
+
+            echo "Attempt $i: fullyUp=$FULLY_UP, waiting..."
+            echo "$RESPONSE" | jq . 2>/dev/null || echo "$RESPONSE"
+            sleep 10
+          done
+
+          echo "Cluster did not become fully up after 30 attempts"
+          exit 1
+
       - name: Terraform Destroy
         working-directory: ci
         if: always()
