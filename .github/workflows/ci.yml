@@ -1,0 +1,138 @@
+# Validates the module works with AWS
+# Runs plan, apply, verify, and destroy on every PR, merge to main, and daily schedule
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+permissions:
+  id-token: write
+  contents: read
+
+# Prevent concurrent runs from conflicting on Terraform state
+# Static group ensures only one run at a time across all PRs/branches
+concurrency:
+  group: terraform-ci
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-west-2
+  TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
+  TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
+  TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
+
+jobs:
+  test:
+    name: Plan + Apply + Verify + Destroy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+          # Disable wrapper to allow capturing output with $(terraform output -raw ...)
+          terraform_wrapper: false
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.STATE_BUCKET }}" \
+            -backend-config="key=${{ secrets.STATE_KEY }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ secrets.LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+
+      - name: Get Terraform Outputs
+        id: tf-outputs
+        run: |
+          echo "alb_url=$(terraform output -raw alb_url)" >> $GITHUB_OUTPUT
+          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+          echo "cluster_target_size=$(terraform output -raw cluster_target_size)" >> $GITHUB_OUTPUT
+
+      - name: Wait for ECS Service Healthy
+        working-directory: .
+        run: |
+          echo "Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster ${{ steps.tf-outputs.outputs.ecs_cluster_name }} \
+            --services ${{ steps.tf-outputs.outputs.ecs_service_name }}
+          echo "ECS service is stable!"
+
+      - name: Verify Cluster Fully Up
+        working-directory: .
+        run: |
+          ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
+          EXPECTED_MEMBERS="${{ steps.tf-outputs.outputs.cluster_target_size }}"
+          echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
+          echo "Expected cluster members: $EXPECTED_MEMBERS"
+
+          # Poll until fullyUp=true and all members joined, or timeout
+          for i in {1..30}; do
+            RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
+            FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
+            MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
+
+            if [ "$FULLY_UP" = "true" ] && [ "$MEMBER_COUNT" = "$EXPECTED_MEMBERS" ]; then
+              echo "Cluster is fully up with $MEMBER_COUNT members!"
+              echo "$RESPONSE" | jq .
+              exit 0
+            fi
+
+            echo "Attempt $i: fullyUp=$FULLY_UP, members=$MEMBER_COUNT/$EXPECTED_MEMBERS, waiting..."
+            sleep 10
+          done
+
+          echo "Cluster verification failed after 30 attempts"
+          echo "Final response:"
+          echo "$RESPONSE" | jq .
+          exit 1
+
+      - name: Terraform Destroy
+        if: always()
+        run: terraform destroy -auto-approve -input=false
+
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "❌ CI Failed: ${{ github.repository }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ CI Failed*\n*Repo:* `${{ github.repository }}`\n*Branch:* `${{ github.head_ref || github.ref_name }}`\n*Triggered by:* ${{ github.actor }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }
