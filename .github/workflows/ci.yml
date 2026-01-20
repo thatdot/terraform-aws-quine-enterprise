@@ -42,7 +42,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.0
+          terraform_version: 1.14.3
           # Disable wrapper to allow capturing output with $(terraform output -raw ...)
           terraform_wrapper: false
 
@@ -118,7 +118,7 @@ jobs:
         run: terraform destroy -auto-approve -input=false
 
       - name: Notify Slack on Failure
-        if: failure()
+        if: failure() && github.event_name != 'pull_request'
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
