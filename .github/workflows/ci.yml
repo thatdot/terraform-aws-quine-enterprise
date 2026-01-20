@@ -42,7 +42,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.0
+          terraform_version: 1.14.3
           # Disable wrapper to allow capturing output with $(terraform output -raw ...)
           terraform_wrapper: false
 
