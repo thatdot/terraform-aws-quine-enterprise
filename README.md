@@ -340,7 +340,8 @@ module "quine_enterprise" {
 
   # JVM options go through java_opts, which the module passes as JDK_JAVA_OPTIONS
   # (the variable the JVM reads; the image ignores JAVA_OPTS).
-  java_opts = "-Xms4g -Xmx6g"
+  # Keep the heap below container_memory (4096 MB by default).
+  java_opts = "-Xms2g -Xmx3g"
 
   # Any Quine Enterprise setting can be set with a CONFIG_FORCE_* variable:
   # "." becomes "_" and "-" becomes "__" (quine.webserver.address below).
