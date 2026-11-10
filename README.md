@@ -117,7 +117,7 @@ module "quine_enterprise" {
 }
 ```
 
-Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append the ECS `:json-key::` suffix to the ARN so only the key is injected.
+Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append `:<json-key>::` to the ARN, where `<json-key>` is the name of the JSON field holding the key (for example `...license-key-AbCdEf:license::`), so only that value is injected.
 
 ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
