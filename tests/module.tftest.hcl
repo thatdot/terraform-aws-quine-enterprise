@@ -98,7 +98,7 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
   }
 }
 
-run "rejects_names_the_module_sets" {
+run "rejects_duplicate_container_variable_names" {
   command = plan
 
   variables {
@@ -114,8 +114,7 @@ run "rejects_names_the_module_sets" {
   }
 
   expect_failures = [
-    var.container_environment,
-    var.container_secrets,
+    aws_ecs_task_definition.main,
   ]
 }
 

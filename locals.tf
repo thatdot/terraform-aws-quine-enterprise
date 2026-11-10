@@ -121,6 +121,14 @@ locals {
     var.container_secrets
   )
 
+  # Every environment variable and secret name in the container. ECS rejects
+  # duplicates, and a caller entry that repeats a module-set name (such as
+  # JDK_JAVA_OPTIONS) would override it.
+  container_variable_names = concat(
+    [for env in local.container_environment : env.name],
+    [for secret in local.container_secrets : secret.name]
+  )
+
   # ARNs the execution role must be able to read. A Secrets Manager valueFrom
   # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
   container_secret_arns = distinct([

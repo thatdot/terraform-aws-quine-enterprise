@@ -124,6 +124,13 @@ resource "aws_ecs_task_definition" "main" {
       Name = "${var.project_name}-task"
     }
   )
+
+  lifecycle {
+    precondition {
+      condition     = length(distinct(local.container_variable_names)) == length(local.container_variable_names)
+      error_message = "Container environment variable and secret names must be unique, including the ones the module sets itself (such as JDK_JAVA_OPTIONS). Pass JVM options through java_opts and the license key through license_key_secret_arn."
+    }
+  }
 }
 
 # ECS Service

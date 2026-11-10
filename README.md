@@ -135,6 +135,8 @@ Two things follow from ECS fetching the secret at task start:
 | terraform | >= 1.5.0      |
 | aws       | >= 5.0, < 6.0 |
 
+The default health check uses the v2 API (`/api/v2/system/liveness`), so the container image must be Quine Enterprise 2.0.0 or later.
+
 ## Providers
 
 | Name | Version |

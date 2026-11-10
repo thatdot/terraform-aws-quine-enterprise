@@ -171,21 +171,13 @@ variable "container_memory" {
 }
 
 variable "container_environment" {
-  description = "Environment variables to pass to the container. Values are stored in plain text in the task definition; use container_secrets for anything sensitive. Do not set JDK_JAVA_OPTIONS here (the module sets it; use java_opts instead)."
+  description = "Environment variables to pass to the container. Values are stored in plain text in the task definition; use container_secrets for anything sensitive. Names must not repeat ones the module sets itself, such as JDK_JAVA_OPTIONS (use java_opts for JVM options)."
   type = list(object({
     name  = string
     value = string
   }))
   default  = []
   nullable = false
-
-  validation {
-    condition = length(setintersection(
-      [for env in var.container_environment : env.name],
-      ["ENVIRONMENT", "JDK_JAVA_OPTIONS", "QUINE_SEED_DNS", "CONFIG_FORCE_quine_license__key"]
-    )) == 0
-    error_message = "ENVIRONMENT, JDK_JAVA_OPTIONS, QUINE_SEED_DNS and CONFIG_FORCE_quine_license__key are set by the module and must not be set in container_environment. Pass JVM options through java_opts and the license key through license_key_secret_arn."
-  }
 }
 
 variable "container_secrets" {
@@ -196,14 +188,6 @@ variable "container_secrets" {
   }))
   default  = []
   nullable = false
-
-  validation {
-    condition = length(setintersection(
-      [for secret in var.container_secrets : secret.name],
-      ["ENVIRONMENT", "JDK_JAVA_OPTIONS", "QUINE_SEED_DNS", "CONFIG_FORCE_quine_license__key"]
-    )) == 0
-    error_message = "ENVIRONMENT, JDK_JAVA_OPTIONS, QUINE_SEED_DNS and CONFIG_FORCE_quine_license__key are set by the module and must not be repeated in container_secrets."
-  }
 
   validation {
     condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", secret.valueFrom))])
@@ -222,7 +206,7 @@ variable "internal_alb" {
 }
 
 variable "health_check_path" {
-  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint. Because the same path drives the container health check, prefer liveness over /api/v2/system/readiness, which reports the whole cluster and would restart healthy tasks while a cluster forms or a member is replaced."
+  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint, which requires Quine Enterprise 2.0.0 or later. Because the same path drives the container health check, prefer liveness over /api/v2/system/readiness, which reports the whole cluster and would restart healthy tasks while a cluster forms or a member is replaced."
   type        = string
   default     = "/api/v2/system/liveness"
   nullable    = false

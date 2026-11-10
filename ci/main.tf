@@ -25,7 +25,8 @@ variable "license_key_secret_arn" {
 
 # JVM options for the CI environment, supplied from a repository secret
 variable "java_opts" {
-  type = string
+  type      = string
+  sensitive = true
 }
 
 module "quine_enterprise" {

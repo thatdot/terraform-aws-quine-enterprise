@@ -13,6 +13,5 @@ container_cpu    = 2048
 container_memory = 4096
 desired_count    = 1
 
-
 # License (Required) - ARN of the Secrets Manager secret holding your license key
 license_key_secret_arn = ""
