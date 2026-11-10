@@ -171,21 +171,28 @@ variable "container_memory" {
 }
 
 variable "container_environment" {
-  description = "Environment variables to pass to the container."
+  description = "Environment variables to pass to the container. Values are stored in plain text in the task definition; use container_secrets for anything sensitive. Names must not repeat ones the module sets itself, such as JDK_JAVA_OPTIONS (use java_opts for JVM options)."
   type = list(object({
     name  = string
     value = string
   }))
-  default = []
+  default  = []
+  nullable = false
 }
 
 variable "container_secrets" {
-  description = "Secrets to pass to the container from AWS Secrets Manager or SSM Parameter Store."
+  description = "Secrets to inject into the container as environment variables from AWS Secrets Manager or SSM Parameter Store. Each valueFrom must be a full ARN. The license key has its own input, license_key_secret_arn."
   type = list(object({
     name      = string
     valueFrom = string
   }))
-  default = []
+  default  = []
+  nullable = false
+
+  validation {
+    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", secret.valueFrom))])
+    error_message = "Each container_secrets valueFrom must be the full ARN of a Secrets Manager secret or an SSM parameter, because it is also used in the execution role's IAM policy."
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -199,9 +206,10 @@ variable "internal_alb" {
 }
 
 variable "health_check_path" {
-  description = "Health check path for the ALB target group."
+  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint, which requires Quine Enterprise 2.0.0 or later. Because the same path drives the container health check, prefer liveness over /api/v2/system/readiness, which reports the whole cluster and would restart healthy tasks while a cluster forms or a member is replaced."
   type        = string
-  default     = "/api/v1/admin/liveness"
+  default     = "/api/v2/system/liveness"
+  nullable    = false
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
@@ -383,7 +391,22 @@ variable "service_discovery_namespace_name" {
 }
 
 variable "java_opts" {
-  description = "Additional Java options to pass to the Quine Enterprise container via JAVA_OPTS environment variable."
+  description = "Additional Java options passed to the Quine Enterprise JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets (such as the license key) here; use license_key_secret_arn instead."
   type        = string
   default     = ""
+  nullable    = false
+}
+
+# -----------------------------------------------------------------------------
+# Quine Enterprise License Configuration
+# -----------------------------------------------------------------------------
+
+variable "license_key_secret_arn" {
+  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Quine Enterprise license key. This is required. ECS injects it into the container as the CONFIG_FORCE_quine_license__key environment variable, so the key never appears in the task definition or logs. Use the complete ARN, including the random 6-character suffix Secrets Manager appends to the secret name; an ARN built from the name alone does not match in IAM. The ':json-key:version-stage:version-id' suffix supported by ECS is allowed."
+  type        = string
+
+  validation {
+    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", var.license_key_secret_arn))
+    error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
+  }
 }

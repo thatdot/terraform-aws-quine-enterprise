@@ -106,7 +106,7 @@ resource "aws_ecs_task_definition" "main" {
 
       environment = local.container_environment
 
-      secrets = length(var.container_secrets) > 0 ? var.container_secrets : null
+      secrets = local.container_secrets
 
       healthCheck = {
         command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}${var.health_check_path} || exit 1"]
@@ -124,6 +124,13 @@ resource "aws_ecs_task_definition" "main" {
       Name = "${var.project_name}-task"
     }
   )
+
+  lifecycle {
+    precondition {
+      condition     = length(distinct(local.container_variable_names)) == length(local.container_variable_names)
+      error_message = "Container environment variable and secret names must be unique, including the ones the module sets itself (such as JDK_JAVA_OPTIONS). Pass JVM options through java_opts and the license key through license_key_secret_arn."
+    }
+  }
 }
 
 # ECS Service
@@ -168,7 +175,8 @@ resource "aws_ecs_service" "main" {
   # Ensure the ALB listener is created before the service
   depends_on = [
     aws_lb_listener.http,
-    aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+    aws_iam_role_policy_attachment.ecs_task_execution_role_policy,
+    aws_iam_role_policy.ecs_task_execution_secrets
   ]
 
   # Enable deployment circuit breaker for safer deployments

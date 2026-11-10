@@ -8,7 +8,7 @@ Simplest deployment of Quine Enterprise on AWS ECS Fargate with minimal configur
 - Terraform >= 1.5.0
 - Default VPC in the target region
 - Quine Enterprise container image (from your registry or ECR)
-- Quine Enterprise license key
+- Quine Enterprise license key stored in AWS Secrets Manager (see [License Key](../../README.md#license-key)); you pass the secret's ARN as `license_key_secret_arn`
 
 ## Quick Start
 
@@ -24,8 +24,8 @@ cp terraform.tfvars.example terraform.tfvars
 # Container image (required)
 container_image = "your-registry/quine-enterprise:latest"
 
-# Quine Enterprise license (required)
-license_key        = "YOUR_LICENSE_KEY"
+# ARN of the Secrets Manager secret holding your license key (required)
+license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 ```
 
 3. Deploy:

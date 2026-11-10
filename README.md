@@ -53,7 +53,10 @@ module "quine_enterprise" {
   source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
   project_name    = "my-quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+
+  # License key, read from AWS Secrets Manager (see "License Key" below)
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 }
 
 output "url" {
@@ -69,7 +72,9 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise-prod"
   environment     = "prod"
-  container_image = "your-registry/quine-enterprise:latest"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
   # Custom VPC
   vpc_id     = "vpc-0123456789abcdef0"
@@ -94,12 +99,43 @@ module "quine_enterprise" {
 }
 ```
 
+## License Key
+
+Quine Enterprise needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN (the complete ARN, including the random suffix Secrets Manager adds to the name):
+
+```bash
+aws secretsmanager create-secret \
+  --name quine-enterprise/license-key \
+  --secret-string "$QUINE_LICENSE_KEY" \
+  --query ARN --output text
+```
+
+```hcl
+module "quine_enterprise" {
+  # ...
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+}
+```
+
+Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append `:<json-key>::` to the ARN, where `<json-key>` is the name of the JSON field holding the key (for example `...license-key-AbCdEf:license::`), so only that value is injected.
+
+ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
+
+Two things follow from ECS fetching the secret at task start:
+
+- The task's subnets need a route to Secrets Manager (or SSM): a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
+- Changing the secret's value does not restart running tasks. After rotating the key, run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
+
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
+
 ## Requirements
 
 | Name      | Version       |
 | --------- | ------------- |
 | terraform | >= 1.5.0      |
 | aws       | >= 5.0, < 6.0 |
+
+The default health check uses the v2 API (`/api/v2/system/liveness`), so the container image must be Quine Enterprise 2.0.0 or later.
 
 ## Providers
 
@@ -121,6 +157,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | Name           | Description                                                              | Type     |
 | -------------- | ------------------------------------------------------------------------ | -------- |
 | `project_name` | Project name for resource naming (3-32 chars, alphanumeric with hyphens) | `string` |
+| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` |
 
 ### Environment
 
@@ -160,7 +197,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_port`        | Container port                   | `number`       | `8080`               |
 | `container_cpu`         | CPU units (256-16384)            | `number`       | `2048`               |
 | `container_memory`      | Memory in MB                     | `number`       | `4096`               |
-| `container_environment` | Environment variables            | `list(object)` | `[]`                 |
+| `container_environment` | Environment variables (plain text) | `list(object)` | `[]`               |
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`                 |
 
 ### Load Balancer
@@ -168,7 +205,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | Name                               | Description                        | Type     | Default                    |
 | ---------------------------------- | ---------------------------------- | -------- | -------------------------- |
 | `internal_alb`                     | Internal ALB (not internet-facing) | `bool`   | `false`                    |
-| `health_check_path`                | Health check path                  | `string` | `"/api/v1/admin/liveness"` |
+| `health_check_path`                | Health check path                  | `string` | `"/api/v2/system/liveness"` |
 | `health_check_interval`            | Health check interval (seconds)    | `number` | `30`                       |
 | `health_check_timeout`             | Health check timeout (seconds)     | `number` | `5`                        |
 | `health_check_healthy_threshold`   | Healthy threshold                  | `number` | `2`                        |
@@ -202,11 +239,11 @@ See the [examples](./examples/) directory for complete usage examples:
 
 | Name                               | Description                                                              | Type     | Default |
 | ---------------------------------- | ------------------------------------------------------------------------ | -------- | ------- |
-| `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `3`     |
+| `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `1`     |
 | `cluster_port`                     | Port for Pekko remoting (inter-node communication after cluster formation) | `number` | `25520` |
 | `cluster_management_port`          | Port for Pekko cluster bootstrap HTTP discovery (contact point probing)  | `number` | `7626`  |
 | `service_discovery_namespace_name` | Private DNS namespace name (defaults to `{project_name}.local`)          | `string` | `null`  |
-| `java_opts`                        | Additional Java options to pass via JAVA_OPTS environment variable       | `string` | `""`    |
+| `java_opts`                        | Additional JVM options, passed via `JDK_JAVA_OPTIONS`. Plain text and logged at startup: no secrets | `string` | `""`    |
 
 ## Outputs
 
@@ -287,8 +324,11 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.public_subnets
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.public_subnets
 }
 ```
 
@@ -301,20 +341,29 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
+  # JVM options go through java_opts, which the module passes as JDK_JAVA_OPTIONS
+  # (the variable the JVM reads; the image ignores JAVA_OPTS).
+  # Keep the heap below container_memory (4096 MB by default).
+  java_opts = "-Xms2g -Xmx3g"
+
+  # Any Quine Enterprise setting can be set with a CONFIG_FORCE_* variable:
+  # "." becomes "_" and "-" becomes "__" (quine.webserver.address below).
   container_environment = [
     {
-      name  = "JAVA_OPTS"
-      value = "-Xms4g -Xmx6g"
-    },
-    {
-      name  = "QUINE_WEBSERVER_ADDRESS"
+      name  = "CONFIG_FORCE_quine_webserver_address"
       value = "0.0.0.0"
     }
   ]
 }
 ```
 
+Values in `java_opts` and `container_environment` are stored in plain text. Use `license_key_secret_arn` or `container_secrets` for anything sensitive.
+
 ### With Secrets
+
+The license key has its own input, `license_key_secret_arn` (see [License Key](#license-key)). Use `container_secrets` for any other secret; each `valueFrom` must be a full ARN.
 
 ```hcl
 module "quine_enterprise" {
@@ -323,10 +372,12 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
   container_secrets = [
     {
       name      = "DATABASE_PASSWORD"
-      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass"
+      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass-AbCdEf"
     }
   ]
 }
@@ -340,6 +391,9 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
   enable_https    = true
   certificate_arn = aws_acm_certificate.quine_enterprise.arn
 }
@@ -368,7 +422,9 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
-  # Multi-member cluster configuration (default is 3)
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
+  # Multi-member cluster configuration (default is 1)
   cluster_target_size = 3
 
   # Container sizing for production cluster
@@ -389,15 +445,18 @@ output "seed_dns" {
 }
 ```
 
-For a single-member deployment (non-clustered), set `cluster_target_size = 1`:
+For a single-member deployment (non-clustered), leave `cluster_target_size` at its default of `1`:
 
 ```hcl
 module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name        = "quine-enterprise-dev"
-  container_image     = "your-registry/quine-enterprise:latest"
-  cluster_target_size = 1  # Single-member mode (no service discovery)
+  project_name    = "quine-enterprise-dev"
+  container_image = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
+  # cluster_target_size defaults to 1: single-member mode, no service discovery
 }
 ```
 

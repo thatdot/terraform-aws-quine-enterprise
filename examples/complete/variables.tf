@@ -139,16 +139,15 @@ variable "container_memory" {
 # Quine Enterprise Configuration
 # -----------------------------------------------------------------------------
 
-variable "license_key" {
-  description = "Quine Enterprise license key."
+variable "license_key_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret that holds the Quine Enterprise license key. Create it outside Terraform so the key never enters Terraform variables or state."
   type        = string
-  sensitive   = true
 }
 
-variable "license_server_uri" {
-  description = "Quine Enterprise license server URI."
+variable "java_opts" {
+  description = "Additional JVM options for Quine Enterprise (plain text, logged at startup: no secrets)."
   type        = string
-  default     = "https://license-server.dev.thatdot.com"
+  default     = ""
 }
 
 variable "container_secrets" {
@@ -173,7 +172,7 @@ variable "internal_alb" {
 variable "health_check_path" {
   description = "Health check path"
   type        = string
-  default     = "/api/v1/admin/liveness"
+  default     = null # use the module default
 }
 
 variable "health_check_interval" {
