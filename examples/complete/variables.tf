@@ -145,9 +145,9 @@ variable "license_key_secret_arn" {
 }
 
 variable "license_server_uri" {
-  description = "Quine Enterprise license server URI."
+  description = "Quine Enterprise license server URI. Leave unset to use the product default."
   type        = string
-  default     = "https://license.thatdot.com"
+  default     = null
 }
 
 variable "container_secrets" {

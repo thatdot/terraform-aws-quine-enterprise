@@ -78,7 +78,7 @@ jobs:
           echo "cluster_target_size=$(terraform output -raw cluster_target_size)" >> $GITHUB_OUTPUT
           echo "ecs_task_definition_arn=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_OUTPUT
 
-      - name: Verify License Key Is Not In Task Definition
+      - name: Verify License Configuration In Task Definition
         working-directory: .
         run: |
           TASK_DEF=$(aws ecs describe-task-definition \
@@ -95,6 +95,12 @@ jobs:
             exit 1
           fi
           echo "License key is injected as a container secret only"
+          # CI must never run against the production license server
+          if ! echo "$TASK_DEF" | jq -e '[.environment[]? | select(.name == "JDK_JAVA_OPTIONS") | .value] | any(test("license-server-uri=https://license-server[.]dev[.]thatdot[.]com( |$)"))' > /dev/null; then
+            echo "The deployment is not configured for the dev license server; check the LICENSE_SERVER_URI secret"
+            exit 1
+          fi
+          echo "Deployment points at the dev license server"
 
       - name: Wait for ECS Service Healthy
         working-directory: .

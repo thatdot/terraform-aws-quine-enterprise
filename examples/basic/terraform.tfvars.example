@@ -15,4 +15,4 @@ container_image = "your-registry/quine-enterprise:latest"
 # Store the key in AWS Secrets Manager first and pass the secret's ARN here:
 #   aws secretsmanager create-secret --name quine-enterprise/license-key --secret-string "$QUINE_LICENSE_KEY"
 license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
-license_server_uri     = "https://license.thatdot.com" # License server URI
+# license_server_uri = "https://license.thatdot.com" # Optional - defaults to the product's built-in license server

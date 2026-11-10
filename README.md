@@ -202,7 +202,7 @@ See the [examples](./examples/) directory for complete usage examples:
 
 | Name                 | Description                         | Type     | Default                         |
 | -------------------- | ----------------------------------- | -------- | ------------------------------- |
-| `license_server_uri` | Quine Enterprise license server URI | `string` | `"https://license.thatdot.com"` |
+| `license_server_uri` | Quine Enterprise license server URI. Unset uses the product's built-in default | `string` | `null` |
 
 ### Load Balancer
 
