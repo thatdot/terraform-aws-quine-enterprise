@@ -29,6 +29,11 @@ variables {
 run "defaults" {
   command = plan
 
+  variables {
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf:key::"
+    java_opts              = "-Dquine.license-server-uri=https://license.thatdot.com"
+  }
+
   assert {
     condition     = aws_lb_target_group.main.health_check[0].path == "/api/v2/system/liveness"
     error_message = "ALB health check should default to the v2 liveness endpoint."
@@ -37,30 +42,6 @@ run "defaults" {
   assert {
     condition     = strcontains(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command[1], "/api/v2/system/liveness")
     error_message = "Container health check should default to the v2 liveness endpoint."
-  }
-
-  assert {
-    condition     = strcontains(local.java_opts_value, "-Dconfig.override_with_env_vars=true")
-    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* environment overrides."
-  }
-
-  assert {
-    condition     = !strcontains(aws_iam_role_policy.ecs_task_execution_secrets.policy, "GetSecretValue")
-    error_message = "The execution role must not be granted secret access when no secrets are configured."
-  }
-
-  assert {
-    condition     = jsondecode(aws_ecs_task_definition.main.container_definitions)[0].secrets == null
-    error_message = "No container secrets should be set by default."
-  }
-}
-
-run "license_key_from_secret" {
-  command = plan
-
-  variables {
-    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf:key::"
-    java_opts              = "-Dquine.license-server-uri=https://license.thatdot.com"
   }
 
   assert {
@@ -74,11 +55,17 @@ run "license_key_from_secret" {
   }
 
   assert {
-    condition = alltrue([
-      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
-      !strcontains(env.value, "license-key") && !strcontains(lower(env.name), "license")
-    ])
-    error_message = "No license setting may appear in the task definition's plain-text environment."
+    condition = jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment == [
+      {
+        name  = "ENVIRONMENT"
+        value = "dev"
+      },
+      {
+        name  = "JDK_JAVA_OPTIONS"
+        value = "-Dquine.license-server-uri=https://license.thatdot.com -Dconfig.override_with_env_vars=true -Dquine.cluster.target-size=1"
+      }
+    ]
+    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides and must not carry the license key."
   }
 
   assert {
@@ -109,7 +96,7 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
   }
 }
 
-run "warns_on_reserved_names_and_plain_text_license" {
+run "rejects_reserved_names_and_plain_text_license" {
   command = plan
 
   variables {
@@ -120,9 +107,9 @@ run "warns_on_reserved_names_and_plain_text_license" {
   }
 
   expect_failures = [
-    check.jdk_java_options_not_overridden,
-    check.license_key_secret_not_duplicated,
-    check.license_key_not_in_plain_text,
+    var.java_opts,
+    var.container_environment,
+    var.container_secrets,
   ]
 }
 

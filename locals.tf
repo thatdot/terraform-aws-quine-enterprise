@@ -105,25 +105,15 @@ locals {
   # Container Secrets
   # -----------------------------------------------------------------------------
 
-  # Environment variable Quine Enterprise reads as its quine.license-key setting
-  license_key_env_name = "CONFIG_FORCE_quine_license__key"
-
-  license_secrets = var.license_key_secret_arn != null ? [
-    {
-      name      = local.license_key_env_name
-      valueFrom = var.license_key_secret_arn
-    }
-  ] : []
-
-  # Names supplied by the caller, used by the configuration checks below
-  user_env_and_secret_names = concat(
-    [for env in var.container_environment : env.name],
-    [for secret in var.container_secrets : secret.name]
-  )
-
-  # Combined container secrets
+  # License key (read by Quine Enterprise as the quine.license-key setting),
+  # followed by any user-provided secrets
   container_secrets = concat(
-    local.license_secrets,
+    [
+      {
+        name      = "CONFIG_FORCE_quine_license__key"
+        valueFrom = var.license_key_secret_arn
+      }
+    ],
     var.container_secrets
   )
 
@@ -133,35 +123,6 @@ locals {
     for secret in local.container_secrets :
     try(regex("^arn:[^:]*:secretsmanager:[^:]*:[^:]*:secret:[^:]+", secret.valueFrom), secret.valueFrom)
   ])
-}
-
-# -----------------------------------------------------------------------------
-# Configuration Checks
-# -----------------------------------------------------------------------------
-# These report warnings instead of failing the plan, so existing callers are
-# not broken by upgrading.
-
-check "jdk_java_options_not_overridden" {
-  assert {
-    condition     = !contains(local.user_env_and_secret_names, "JDK_JAVA_OPTIONS")
-    error_message = "container_environment or container_secrets sets JDK_JAVA_OPTIONS, which overrides the value the module builds (cluster options and the flag that makes license_key_secret_arn work). Pass JVM options through java_opts instead."
-  }
-}
-
-check "license_key_secret_not_duplicated" {
-  assert {
-    condition     = var.license_key_secret_arn == null || !contains(local.user_env_and_secret_names, local.license_key_env_name)
-    error_message = "container_environment or container_secrets already defines ${local.license_key_env_name}. Remove that entry when using license_key_secret_arn; ECS rejects duplicate names."
-  }
-}
-
-check "license_key_not_in_plain_text" {
-  assert {
-    condition = !strcontains(var.java_opts, "quine.license-key") && !contains(
-      [for env in var.container_environment : env.name], local.license_key_env_name
-    )
-    error_message = "The license key is being passed in plain text (java_opts or container_environment). It is stored in the task definition and printed to the container log. Use license_key_secret_arn instead."
-  }
 }
 
 # -----------------------------------------------------------------------------

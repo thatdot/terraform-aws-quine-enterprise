@@ -52,54 +52,38 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_additional" {
   policy_arn = each.value
 }
 
-# Policy for reading container secrets (license key and container_secrets).
-#
-# The policy always exists rather than being gated by `count`: callers usually
-# pass the ARN of a secret created in the same configuration, which is unknown
-# at plan time and cannot drive `count`. With no secrets configured it holds
-# only the KMS statement, which grants nothing on its own because it is limited
-# to decryption performed by Secrets Manager or SSM on the role's behalf.
+# Policy for reading container secrets (license key and container_secrets)
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   name = "${var.project_name}-ecs-execution-secrets"
   role = aws_iam_role.ecs_task_execution_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = concat(
-      length(local.container_secret_arns) > 0 ? [
-        {
-          Effect = "Allow"
-          Action = [
-            "secretsmanager:GetSecretValue",
-            "ssm:GetParameters",
-            "ssm:GetParameter"
-          ]
-          Resource = local.container_secret_arns
-        }
-      ] : [],
-      [
-        {
-          Effect   = "Allow"
-          Action   = ["kms:Decrypt"]
-          Resource = "*"
-          Condition = {
-            StringEquals = {
-              "kms:ViaService" = [
-                "secretsmanager.${local.aws_region}.amazonaws.com",
-                "ssm.${local.aws_region}.amazonaws.com"
-              ]
-            }
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = local.container_secret_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = [
+              "secretsmanager.${local.aws_region}.amazonaws.com",
+              "ssm.${local.aws_region}.amazonaws.com"
+            ]
           }
         }
-      ]
-    )
+      }
+    ]
   })
-}
-
-# Previously created only when container_secrets was non-empty
-moved {
-  from = aws_iam_role_policy.ecs_task_execution_secrets[0]
-  to   = aws_iam_role_policy.ecs_task_execution_secrets
 }
 
 # -----------------------------------------------------------------------------

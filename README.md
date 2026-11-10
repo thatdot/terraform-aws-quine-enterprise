@@ -121,7 +121,12 @@ Store the key as a plain string, as the command above does. If you keep it insid
 
 ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
-**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
+Two things follow from ECS fetching the secret at task start:
+
+- The task's subnets need a route to Secrets Manager (or SSM): a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
+- Changing the secret's value does not restart running tasks. After rotating the key, run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
+
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts. The module rejects both.
 
 ## Requirements
 
@@ -150,6 +155,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | Name           | Description                                                              | Type     |
 | -------------- | ------------------------------------------------------------------------ | -------- |
 | `project_name` | Project name for resource naming (3-32 chars, alphanumeric with hyphens) | `string` |
+| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` |
 
 ### Environment
 
@@ -191,12 +197,6 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_memory`      | Memory in MB                     | `number`       | `4096`               |
 | `container_environment` | Environment variables (plain text) | `list(object)` | `[]`               |
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`                 |
-
-### License
-
-| Name                     | Description                                                                                         | Type     | Default |
-| ------------------------ | --------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` | `null`  |
 
 ### Load Balancer
 
@@ -455,14 +455,6 @@ module "quine_enterprise" {
 ```
 
 ## Upgrading
-
-### To the v2 API health check and secret-based license key
-
-- **`health_check_path` now defaults to `/api/v2/system/liveness`** (was `/api/v1/admin/liveness`). Quine Enterprise 2.2.1 serves both, but the v1 API is deprecated and will be removed. If you run a release that predates the v2 API, set `health_check_path = "/api/v1/admin/liveness"` explicitly.
-- **Move the license key out of `java_opts`.** Passing `-Dquine.license-key=...` in `java_opts` still works, but it exposes the key in the task definition and the logs. Store the key in Secrets Manager, set `license_key_secret_arn`, and remove the `-Dquine.license-key` option. Then rotate the key, since the old task definition revisions and log streams still contain it. ECS reads secrets only when a task starts, so after changing the secret's value run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
-- Tasks now fetch the license key from Secrets Manager (or SSM) at start, so their subnets need a route to that service: a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
-- The module now always adds `-Dconfig.override_with_env_vars=true` to `JDK_JAVA_OPTIONS` so that `CONFIG_FORCE_*` environment variables take effect. Expect a new task definition revision and a rolling restart on the first apply.
-- The execution role's secrets policy (`aws_iam_role_policy.ecs_task_execution_secrets`) is now always created. Existing state is migrated automatically by a `moved` block; deployments without secrets gain one inline policy that grants no access on its own.
 
 ### From Direct Terraform to Module
 

@@ -178,6 +178,14 @@ variable "container_environment" {
   }))
   default  = []
   nullable = false
+
+  validation {
+    condition = length(setintersection(
+      [for env in var.container_environment : env.name],
+      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_quine_license__key"]
+    )) == 0
+    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_quine_license__key are set by the module and must not be set in container_environment. Pass JVM options through java_opts and the license key through license_key_secret_arn."
+  }
 }
 
 variable "container_secrets" {
@@ -188,6 +196,14 @@ variable "container_secrets" {
   }))
   default  = []
   nullable = false
+
+  validation {
+    condition = length(setintersection(
+      [for secret in var.container_secrets : secret.name],
+      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_quine_license__key"]
+    )) == 0
+    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_quine_license__key are set by the module and must not be repeated in container_secrets."
+  }
 
   validation {
     condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", secret.valueFrom))])
@@ -394,6 +410,11 @@ variable "java_opts" {
   type        = string
   default     = ""
   nullable    = false
+
+  validation {
+    condition     = !strcontains(var.java_opts, "license-key")
+    error_message = "Do not pass the license key in java_opts: it is stored in plain text and printed to the container log. Use license_key_secret_arn."
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -401,12 +422,11 @@ variable "java_opts" {
 # -----------------------------------------------------------------------------
 
 variable "license_key_secret_arn" {
-  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Quine Enterprise license key. ECS injects it into the container as the CONFIG_FORCE_quine_license__key environment variable, so the key never appears in the task definition or logs. Use the complete ARN, including the random 6-character suffix Secrets Manager appends to the secret name; an ARN built from the name alone does not match in IAM. The ':json-key:version-stage:version-id' suffix supported by ECS is allowed."
+  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Quine Enterprise license key. This is required. ECS injects it into the container as the CONFIG_FORCE_quine_license__key environment variable, so the key never appears in the task definition or logs. Use the complete ARN, including the random 6-character suffix Secrets Manager appends to the secret name; an ARN built from the name alone does not match in IAM. The ':json-key:version-stage:version-id' suffix supported by ECS is allowed."
   type        = string
-  default     = null
 
   validation {
-    condition     = var.license_key_secret_arn == null || can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", var.license_key_secret_arn))
+    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", var.license_key_secret_arn))
     error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
   }
 }
