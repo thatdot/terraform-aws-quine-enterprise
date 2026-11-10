@@ -115,6 +115,12 @@ locals {
     }
   ] : []
 
+  # Names supplied by the caller, used by the configuration checks below
+  user_env_and_secret_names = concat(
+    [for env in var.container_environment : env.name],
+    [for secret in var.container_secrets : secret.name]
+  )
+
   # Combined container secrets
   container_secrets = concat(
     local.license_secrets,
@@ -137,15 +143,24 @@ locals {
 
 check "jdk_java_options_not_overridden" {
   assert {
-    condition     = !contains([for env in var.container_environment : env.name], "JDK_JAVA_OPTIONS")
-    error_message = "container_environment sets JDK_JAVA_OPTIONS, which overrides the value the module builds (cluster options and the flag that makes license_key_secret_arn work). Pass JVM options through java_opts instead."
+    condition     = !contains(local.user_env_and_secret_names, "JDK_JAVA_OPTIONS")
+    error_message = "container_environment or container_secrets sets JDK_JAVA_OPTIONS, which overrides the value the module builds (cluster options and the flag that makes license_key_secret_arn work). Pass JVM options through java_opts instead."
   }
 }
 
 check "license_key_secret_not_duplicated" {
   assert {
-    condition     = var.license_key_secret_arn == null || !contains([for secret in var.container_secrets : secret.name], local.license_key_env_name)
-    error_message = "container_secrets already defines ${local.license_key_env_name}. Remove that entry when using license_key_secret_arn; ECS rejects duplicate secret names."
+    condition     = var.license_key_secret_arn == null || !contains(local.user_env_and_secret_names, local.license_key_env_name)
+    error_message = "container_environment or container_secrets already defines ${local.license_key_env_name}. Remove that entry when using license_key_secret_arn; ECS rejects duplicate names."
+  }
+}
+
+check "license_key_not_in_plain_text" {
+  assert {
+    condition = !strcontains(var.java_opts, "quine.license-key") && !contains(
+      [for env in var.container_environment : env.name], local.license_key_env_name
+    )
+    error_message = "The license key is being passed in plain text (java_opts or container_environment). It is stored in the task definition and printed to the container log. Use license_key_secret_arn instead."
   }
 }
 

@@ -87,6 +87,59 @@ run "license_key_from_secret" {
   }
 }
 
+run "user_secrets_are_granted_once_without_ecs_suffix" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+    container_secrets = [
+      { name = "DB_USER", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:username::" },
+      { name = "DB_PASS", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:password::" },
+      { name = "API_KEY", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/quine/api-key" },
+    ]
+  }
+
+  assert {
+    condition = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == [
+      "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf",
+      "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf",
+      "arn:aws:ssm:us-west-2:123456789012:parameter/quine/api-key",
+    ]
+    error_message = "Execution role should be granted each secret once, by its bare ARN."
+  }
+}
+
+run "warns_on_reserved_names_and_plain_text_license" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+    java_opts              = "-Dquine.license-key=not-a-real-key"
+    container_environment  = [{ name = "JDK_JAVA_OPTIONS", value = "-Xmx6g" }]
+    container_secrets      = [{ name = "CONFIG_FORCE_quine_license__key", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/x" }]
+  }
+
+  expect_failures = [
+    check.jdk_java_options_not_overridden,
+    check.license_key_secret_not_duplicated,
+    check.license_key_not_in_plain_text,
+  ]
+}
+
+run "rejects_non_arn_inputs" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "quine-enterprise/license-key"
+    container_secrets      = [{ name = "DB_PASS", valueFrom = "/quine/db-pass" }]
+  }
+
+  expect_failures = [
+    var.license_key_secret_arn,
+    var.container_secrets,
+  ]
+}
+
 run "license_secret_created_in_same_configuration" {
   command = plan
 

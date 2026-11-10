@@ -115,7 +115,8 @@ jobs:
 
           # Poll until fullyUp=true and all members joined, or timeout
           for i in {1..30}; do
-            RESPONSE=$(curl -s --max-time 10 "$ALB_URL/api/v2/system/status" || echo '{}')
+            # -f: treat HTTP errors (e.g. an ALB 502 page) as a failed attempt, not as a response to parse
+            RESPONSE=$(curl -sf --max-time 10 "$ALB_URL/api/v2/system/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
             MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
 

@@ -74,7 +74,7 @@ module "quine_enterprise" {
   environment     = "prod"
   container_image = "your-registry/quine-enterprise:2.2.1"  # Required
 
-  license_key_secret_arn = aws_secretsmanager_secret.quine_license.arn
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
   # Custom VPC
   vpc_id     = "vpc-0123456789abcdef0"
@@ -101,7 +101,7 @@ module "quine_enterprise" {
 
 ## License Key
 
-Quine Enterprise needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN:
+Quine Enterprise needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN (the complete ARN, including the random suffix Secrets Manager adds to the name):
 
 ```bash
 aws secretsmanager create-secret \
@@ -117,7 +117,7 @@ module "quine_enterprise" {
 }
 ```
 
-ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition, in Terraform state, or in the container logs.
+ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
 **Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
 
@@ -445,7 +445,8 @@ module "quine_enterprise" {
 ### To the v2 API health check and secret-based license key
 
 - **`health_check_path` now defaults to `/api/v2/system/liveness`** (was `/api/v1/admin/liveness`). Quine Enterprise 2.2.1 serves both, but the v1 API is deprecated and will be removed. If you run a release that predates the v2 API, set `health_check_path = "/api/v1/admin/liveness"` explicitly.
-- **Move the license key out of `java_opts`.** Passing `-Dquine.license-key=...` in `java_opts` still works, but it exposes the key in the task definition and the logs. Store the key in Secrets Manager, set `license_key_secret_arn`, and remove the `-Dquine.license-key` option. Then rotate the key, since the old task definition revisions and log streams still contain it.
+- **Move the license key out of `java_opts`.** Passing `-Dquine.license-key=...` in `java_opts` still works, but it exposes the key in the task definition and the logs. Store the key in Secrets Manager, set `license_key_secret_arn`, and remove the `-Dquine.license-key` option. Then rotate the key, since the old task definition revisions and log streams still contain it. ECS reads secrets only when a task starts, so after changing the secret's value run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
+- Tasks now fetch the license key from Secrets Manager (or SSM) at start, so their subnets need a route to that service: a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
 - The module now always adds `-Dconfig.override_with_env_vars=true` to `JDK_JAVA_OPTIONS` so that `CONFIG_FORCE_*` environment variables take effect. Expect a new task definition revision and a rolling restart on the first apply.
 - The execution role's secrets policy (`aws_iam_role_policy.ecs_task_execution_secrets`) is now always created. Existing state is migrated automatically by a `moved` block; deployments without secrets gain one inline policy that grants no access on its own.
 

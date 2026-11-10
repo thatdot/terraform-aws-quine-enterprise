@@ -17,7 +17,8 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.5.0"
+          # >= 1.6 so that .tftest.hcl files are format-checked too
+          terraform_version: "1.14.3"
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
