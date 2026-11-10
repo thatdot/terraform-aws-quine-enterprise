@@ -58,7 +58,7 @@ run "defaults" {
       for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
       env.value if env.name == "JDK_JAVA_OPTIONS"
     ]) == "-Dconfig.override_with_env_vars=true -Dquine.cluster.target-size=1"
-    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides, leave the license server to the product default, and not carry the license key."
+    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides, and not carry the license key."
   }
 
   assert {
@@ -72,7 +72,6 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
 
   variables {
     license_key_secret_arn = "arn:aws:ssm:us-west-2:123456789012:parameter/quine-enterprise/license-key"
-    license_server_uri     = "https://license-server.example.com"
     java_opts              = "-Xmx3g"
     container_secrets = [
       { name = "DB_USER", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:username::" },
@@ -94,8 +93,8 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
     condition = startswith(one([
       for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
       env.value if env.name == "JDK_JAVA_OPTIONS"
-    ]), "-Xmx3g -Dconfig.override_with_env_vars=true -Dquine.license-server-uri=https://license-server.example.com")
-    error_message = "A license server override and user java_opts must both reach JDK_JAVA_OPTIONS."
+    ]), "-Xmx3g -Dconfig.override_with_env_vars=true")
+    error_message = "User java_opts must come first in JDK_JAVA_OPTIONS, followed by the module's options."
   }
 }
 
@@ -125,13 +124,11 @@ run "rejects_malformed_inputs" {
 
   variables {
     license_key_secret_arn = "quine-enterprise/license-key"
-    license_server_uri     = ""
     container_secrets      = [{ name = "DB_PASS", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/db-pass\n" }]
   }
 
   expect_failures = [
     var.license_key_secret_arn,
-    var.license_server_uri,
     var.container_secrets,
   ]
 }

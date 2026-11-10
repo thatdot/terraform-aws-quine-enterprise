@@ -23,7 +23,8 @@ variable "license_key_secret_arn" {
   type = string
 }
 
-variable "license_server_uri" {
+# JVM options for the CI environment, supplied from a repository secret
+variable "java_opts" {
   type = string
 }
 
@@ -35,7 +36,7 @@ module "quine_enterprise" {
   cluster_target_size = 3
 
   license_key_secret_arn = var.license_key_secret_arn
-  license_server_uri     = var.license_server_uri
+  java_opts              = var.java_opts
 }
 
 output "alb_url" {

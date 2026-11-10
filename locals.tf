@@ -67,17 +67,10 @@ locals {
   # is what allows the license key to arrive as an ECS-injected secret.
   config_env_override_java_opt = "-Dconfig.override_with_env_vars=true"
 
-  # License server override, only when the caller sets one; otherwise the
-  # product's built-in default applies. The license key itself is never placed
-  # here: JDK_JAVA_OPTIONS is stored in plain text in the task definition and
-  # the JVM prints it to the log at every start.
-  license_java_opts = var.license_server_uri != null ? "-Dquine.license-server-uri=${var.license_server_uri}" : ""
-
   # Full JDK_JAVA_OPTIONS: user-provided options first, then the module's
   java_opts_value = join(" ", compact([
     var.java_opts,
     local.config_env_override_java_opt,
-    local.license_java_opts,
     local.cluster_java_opts,
   ]))
 

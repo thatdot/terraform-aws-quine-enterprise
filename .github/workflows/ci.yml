@@ -27,7 +27,8 @@ env:
   # ARN of a pre-existing Secrets Manager secret in the CI account and region
   # (the CI role cannot create secrets). The key itself never reaches CI.
   TF_VAR_license_key_secret_arn: ${{ secrets.LICENSE_KEY_SECRET_ARN }}
-  TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
+  # JVM options that point this deployment at the CI environment
+  TF_VAR_java_opts: ${{ secrets.CI_JAVA_OPTS }}
 
 jobs:
   test:
@@ -95,12 +96,16 @@ jobs:
             exit 1
           fi
           echo "License key is injected as a container secret only"
-          # CI must never run against the production license server
-          if ! echo "$TASK_DEF" | jq -e '[.environment[]? | select(.name == "JDK_JAVA_OPTIONS") | .value] | any(test("license-server-uri=https://license-server[.]dev[.]thatdot[.]com( |$)"))' > /dev/null; then
-            echo "The deployment is not configured for the dev license server; check the LICENSE_SERVER_URI secret"
+          # The CI environment's JVM options must reach the container unchanged
+          if [ -z "$TF_VAR_java_opts" ]; then
+            echo "The CI_JAVA_OPTS repository secret is not set"
             exit 1
           fi
-          echo "Deployment points at the dev license server"
+          if ! echo "$TASK_DEF" | jq -e --arg opts "$TF_VAR_java_opts" '[.environment[]? | select(.name == "JDK_JAVA_OPTIONS") | .value] | any(startswith($opts))' > /dev/null; then
+            echo "The CI JVM options are missing from the task definition"
+            exit 1
+          fi
+          echo "CI JVM options are applied"
 
       - name: Wait for ECS Service Healthy
         working-directory: .

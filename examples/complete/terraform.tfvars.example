@@ -65,7 +65,6 @@ container_memory = 8192   # 8 GB
 # Store the key in AWS Secrets Manager first and pass the secret's ARN here:
 #   aws secretsmanager create-secret --name quine-enterprise/license-key --secret-string "$QUINE_LICENSE_KEY"
 license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
-# license_server_uri = "https://license.thatdot.com" # Optional - defaults to the product's built-in license server
 
 # Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
 # container_secrets = [

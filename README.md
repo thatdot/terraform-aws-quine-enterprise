@@ -198,12 +198,6 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_environment` | Environment variables (plain text) | `list(object)` | `[]`               |
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`                 |
 
-### License
-
-| Name                 | Description                         | Type     | Default                         |
-| -------------------- | ----------------------------------- | -------- | ------------------------------- |
-| `license_server_uri` | Quine Enterprise license server URI. Unset uses the product's built-in default | `string` | `null` |
-
 ### Load Balancer
 
 | Name                               | Description                        | Type     | Default                    |

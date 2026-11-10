@@ -50,7 +50,9 @@ module "quine_enterprise" {
   # License: the key is injected by ECS from Secrets Manager and is never
   # stored in plain text
   license_key_secret_arn = var.license_key_secret_arn
-  license_server_uri     = var.license_server_uri
+
+  # Additional JVM options (non-secret settings only)
+  java_opts = var.java_opts
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"

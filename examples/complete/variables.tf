@@ -144,10 +144,10 @@ variable "license_key_secret_arn" {
   type        = string
 }
 
-variable "license_server_uri" {
-  description = "Quine Enterprise license server URI. Leave unset to use the product default."
+variable "java_opts" {
+  description = "Additional JVM options for Quine Enterprise (plain text, logged at startup: no secrets)."
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "container_secrets" {

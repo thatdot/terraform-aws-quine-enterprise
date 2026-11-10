@@ -426,14 +426,3 @@ variable "license_key_secret_arn" {
     error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
   }
 }
-
-variable "license_server_uri" {
-  description = "Quine Enterprise license server URI. Leave unset to use the product's built-in default (https://license.thatdot.com)."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.license_server_uri == null || can(regex("^https?://\\S+$", var.license_server_uri))
-    error_message = "license_server_uri must be an http(s) URL."
-  }
-}
