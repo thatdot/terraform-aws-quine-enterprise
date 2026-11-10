@@ -170,12 +170,10 @@ module "quine_enterprise" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # License key: injected by ECS from Secrets Manager, never stored in plain text
+  # License: the key is injected by ECS from Secrets Manager and is never
+  # stored in plain text
   license_key_secret_arn = var.license_key_secret_arn
-
-  # Additional JVM options (non-secret settings only). The module sets these via
-  # JDK_JAVA_OPTIONS and automatically adds cluster-related options.
-  java_opts = "-Dquine.license-server-uri=${var.license_server_uri}"
+  license_server_uri     = var.license_server_uri
 
   # Secrets (from SSM Parameter Store or Secrets Manager)
   container_secrets = var.container_secrets

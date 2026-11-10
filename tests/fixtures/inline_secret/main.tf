@@ -1,5 +1,5 @@
 # Test fixture: the license secret is created in the same configuration as the
-# module, so its ARN is unknown at plan time. This is how most callers wire it.
+# module, so its ARN is unknown at plan time and the module must still plan.
 
 variable "container_image" {
   type = string

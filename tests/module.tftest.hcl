@@ -31,7 +31,6 @@ run "defaults" {
 
   variables {
     license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf:key::"
-    java_opts              = "-Dquine.license-server-uri=https://license.thatdot.com"
   }
 
   assert {
@@ -55,17 +54,11 @@ run "defaults" {
   }
 
   assert {
-    condition = jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment == [
-      {
-        name  = "ENVIRONMENT"
-        value = "dev"
-      },
-      {
-        name  = "JDK_JAVA_OPTIONS"
-        value = "-Dquine.license-server-uri=https://license.thatdot.com -Dconfig.override_with_env_vars=true -Dquine.cluster.target-size=1"
-      }
-    ]
-    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides and must not carry the license key."
+    condition = one([
+      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
+      env.value if env.name == "JDK_JAVA_OPTIONS"
+    ]) == "-Dconfig.override_with_env_vars=true -Dquine.license-server-uri=https://license.thatdot.com -Dquine.cluster.target-size=1"
+    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides, set the license server, and not carry the license key."
   }
 
   assert {
@@ -78,7 +71,7 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
   command = plan
 
   variables {
-    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+    license_key_secret_arn = "arn:aws:ssm:us-west-2:123456789012:parameter/quine-enterprise/license-key"
     container_secrets = [
       { name = "DB_USER", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:username::" },
       { name = "DB_PASS", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:password::" },
@@ -88,7 +81,7 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
 
   assert {
     condition = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == [
-      "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf",
+      "arn:aws:ssm:us-west-2:123456789012:parameter/quine-enterprise/license-key",
       "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf",
       "arn:aws:ssm:us-west-2:123456789012:parameter/quine/api-key",
     ]
@@ -96,33 +89,39 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
   }
 }
 
-run "rejects_reserved_names_and_plain_text_license" {
+run "rejects_names_the_module_sets" {
   command = plan
 
   variables {
     license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
-    java_opts              = "-Dquine.license-key=not-a-real-key"
-    container_environment  = [{ name = "JDK_JAVA_OPTIONS", value = "-Xmx6g" }]
-    container_secrets      = [{ name = "CONFIG_FORCE_quine_license__key", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/x" }]
+    container_environment = [
+      { name = "JDK_JAVA_OPTIONS", value = "-Xmx6g" },
+      { name = "CONFIG_FORCE_quine_license__key", value = "not-a-real-key" },
+    ]
+    container_secrets = [
+      { name = "JDK_JAVA_OPTIONS", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/x" },
+      { name = "CONFIG_FORCE_quine_license__key", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/y" },
+    ]
   }
 
   expect_failures = [
-    var.java_opts,
     var.container_environment,
     var.container_secrets,
   ]
 }
 
-run "rejects_non_arn_inputs" {
+run "rejects_malformed_inputs" {
   command = plan
 
   variables {
     license_key_secret_arn = "quine-enterprise/license-key"
-    container_secrets      = [{ name = "DB_PASS", valueFrom = "/quine/db-pass" }]
+    license_server_uri     = ""
+    container_secrets      = [{ name = "DB_PASS", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/db-pass\n" }]
   }
 
   expect_failures = [
     var.license_key_secret_arn,
+    var.license_server_uri,
     var.container_secrets,
   ]
 }

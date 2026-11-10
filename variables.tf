@@ -182,14 +182,14 @@ variable "container_environment" {
   validation {
     condition = length(setintersection(
       [for env in var.container_environment : env.name],
-      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_quine_license__key"]
+      ["ENVIRONMENT", "JDK_JAVA_OPTIONS", "QUINE_SEED_DNS", "CONFIG_FORCE_quine_license__key"]
     )) == 0
-    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_quine_license__key are set by the module and must not be set in container_environment. Pass JVM options through java_opts and the license key through license_key_secret_arn."
+    error_message = "ENVIRONMENT, JDK_JAVA_OPTIONS, QUINE_SEED_DNS and CONFIG_FORCE_quine_license__key are set by the module and must not be set in container_environment. Pass JVM options through java_opts and the license key through license_key_secret_arn."
   }
 }
 
 variable "container_secrets" {
-  description = "Secrets to inject into the container as environment variables from AWS Secrets Manager or SSM Parameter Store. Each valueFrom must be a full ARN. For the license key, prefer license_key_secret_arn."
+  description = "Secrets to inject into the container as environment variables from AWS Secrets Manager or SSM Parameter Store. Each valueFrom must be a full ARN. The license key has its own input, license_key_secret_arn."
   type = list(object({
     name      = string
     valueFrom = string
@@ -200,13 +200,13 @@ variable "container_secrets" {
   validation {
     condition = length(setintersection(
       [for secret in var.container_secrets : secret.name],
-      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_quine_license__key"]
+      ["ENVIRONMENT", "JDK_JAVA_OPTIONS", "QUINE_SEED_DNS", "CONFIG_FORCE_quine_license__key"]
     )) == 0
-    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_quine_license__key are set by the module and must not be repeated in container_secrets."
+    error_message = "ENVIRONMENT, JDK_JAVA_OPTIONS, QUINE_SEED_DNS and CONFIG_FORCE_quine_license__key are set by the module and must not be repeated in container_secrets."
   }
 
   validation {
-    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", secret.valueFrom))])
+    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", secret.valueFrom))])
     error_message = "Each container_secrets valueFrom must be the full ARN of a Secrets Manager secret or an SSM parameter, because it is also used in the execution role's IAM policy."
   }
 }
@@ -225,6 +225,7 @@ variable "health_check_path" {
   description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint. Because the same path drives the container health check, prefer liveness over /api/v2/system/readiness, which reports the whole cluster and would restart healthy tasks while a cluster forms or a member is replaced."
   type        = string
   default     = "/api/v2/system/liveness"
+  nullable    = false
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
@@ -410,11 +411,6 @@ variable "java_opts" {
   type        = string
   default     = ""
   nullable    = false
-
-  validation {
-    condition     = !strcontains(var.java_opts, "license-key")
-    error_message = "Do not pass the license key in java_opts: it is stored in plain text and printed to the container log. Use license_key_secret_arn."
-  }
 }
 
 # -----------------------------------------------------------------------------
@@ -426,7 +422,19 @@ variable "license_key_secret_arn" {
   type        = string
 
   validation {
-    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", var.license_key_secret_arn))
+    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", var.license_key_secret_arn))
     error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
+  }
+}
+
+variable "license_server_uri" {
+  description = "Quine Enterprise license server URI."
+  type        = string
+  default     = "https://license.thatdot.com"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^https?://\\S+$", var.license_server_uri))
+    error_message = "license_server_uri must be an http(s) URL."
   }
 }

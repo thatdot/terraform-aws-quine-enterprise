@@ -64,8 +64,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue",
-          "ssm:GetParameters",
-          "ssm:GetParameter"
+          "ssm:GetParameters"
         ]
         Resource = local.container_secret_arns
       },

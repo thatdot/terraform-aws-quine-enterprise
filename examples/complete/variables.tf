@@ -172,7 +172,7 @@ variable "internal_alb" {
 variable "health_check_path" {
   description = "Health check path"
   type        = string
-  default     = "/api/v2/system/liveness"
+  default     = null # use the module default
 }
 
 variable "health_check_interval" {

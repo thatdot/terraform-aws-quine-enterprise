@@ -67,8 +67,13 @@ locals {
   # is what allows the license key to arrive as an ECS-injected secret.
   config_env_override_java_opt = "-Dconfig.override_with_env_vars=true"
 
-  # Full JDK_JAVA_OPTIONS combining user-provided, config-override, and cluster options
-  java_opts_value = trimspace("${var.java_opts} ${local.config_env_override_java_opt} ${local.cluster_java_opts}")
+  # Non-secret license configuration. The license key itself is never placed
+  # here: JDK_JAVA_OPTIONS is stored in plain text in the task definition and
+  # the JVM prints it to the log at every start.
+  license_java_opts = "-Dquine.license-server-uri=${var.license_server_uri}"
+
+  # Full JDK_JAVA_OPTIONS combining user-provided, config-override, license, and cluster options
+  java_opts_value = trimspace("${var.java_opts} ${local.config_env_override_java_opt} ${local.license_java_opts} ${local.cluster_java_opts}")
 
   # -----------------------------------------------------------------------------
   # Container Environment Variables
