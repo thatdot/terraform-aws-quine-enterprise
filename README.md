@@ -445,11 +445,12 @@ For a single-member deployment (non-clustered), leave `cluster_target_size` at i
 module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise"
 
-  project_name        = "quine-enterprise-dev"
-  container_image     = "your-registry/quine-enterprise:latest"
+  project_name    = "quine-enterprise-dev"
+  container_image = "your-registry/quine-enterprise:latest"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
-  cluster_target_size = 1  # Single-member mode (no service discovery)
+
+  # cluster_target_size defaults to 1: single-member mode, no service discovery
 }
 ```
 
