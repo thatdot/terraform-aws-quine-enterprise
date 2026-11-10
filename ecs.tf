@@ -168,7 +168,8 @@ resource "aws_ecs_service" "main" {
   # Ensure the ALB listener is created before the service
   depends_on = [
     aws_lb_listener.http,
-    aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+    aws_iam_role_policy_attachment.ecs_task_execution_role_policy,
+    aws_iam_role_policy.ecs_task_execution_secrets
   ]
 
   # Enable deployment circuit breaker for safer deployments

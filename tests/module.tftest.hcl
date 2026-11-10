@@ -59,7 +59,7 @@ run "license_key_from_secret" {
   command = plan
 
   variables {
-    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:qe/license-AbCdEf:key::"
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf:key::"
     java_opts              = "-Dquine.license-server-uri=https://license.thatdot.com"
   }
 
@@ -67,19 +67,22 @@ run "license_key_from_secret" {
     condition = jsondecode(aws_ecs_task_definition.main.container_definitions)[0].secrets == [
       {
         name      = "CONFIG_FORCE_quine_license__key"
-        valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:qe/license-AbCdEf:key::"
+        valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf:key::"
       }
     ]
     error_message = "License key must be injected as the CONFIG_FORCE_quine_license__key container secret."
   }
 
   assert {
-    condition     = !strcontains(aws_ecs_task_definition.main.container_definitions, "license-key")
-    error_message = "The license key setting must not appear in the task definition's plain-text configuration."
+    condition = alltrue([
+      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
+      !strcontains(env.value, "license-key") && !strcontains(lower(env.name), "license")
+    ])
+    error_message = "No license setting may appear in the task definition's plain-text environment."
   }
 
   assert {
-    condition     = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == ["arn:aws:secretsmanager:us-west-2:123456789012:secret:qe/license-AbCdEf"]
+    condition     = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == ["arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"]
     error_message = "Execution role must be granted the bare secret ARN (without the json-key suffix)."
   }
 }

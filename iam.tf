@@ -58,7 +58,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_additional" {
 # pass the ARN of a secret created in the same configuration, which is unknown
 # at plan time and cannot drive `count`. With no secrets configured it holds
 # only the KMS statement, which grants nothing on its own because it is limited
-# to decryption performed by Secrets Manager on the role's behalf.
+# to decryption performed by Secrets Manager or SSM on the role's behalf.
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   name = "${var.project_name}-ecs-execution-secrets"
   role = aws_iam_role.ecs_task_execution_role.id
@@ -84,7 +84,10 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           Resource = "*"
           Condition = {
             StringEquals = {
-              "kms:ViaService" = "secretsmanager.${local.aws_region}.amazonaws.com"
+              "kms:ViaService" = [
+                "secretsmanager.${local.aws_region}.amazonaws.com",
+                "ssm.${local.aws_region}.amazonaws.com"
+              ]
             }
           }
         }

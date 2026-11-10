@@ -123,10 +123,28 @@ locals {
   # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
   container_secret_arns = distinct([
     for secret in local.container_secrets :
-    can(regex("^arn:[^:]*:secretsmanager:", secret.valueFrom))
-    ? join(":", slice(split(":", secret.valueFrom), 0, min(7, length(split(":", secret.valueFrom)))))
-    : secret.valueFrom
+    try(regex("^arn:[^:]*:secretsmanager:[^:]*:[^:]*:secret:[^:]+", secret.valueFrom), secret.valueFrom)
   ])
+}
+
+# -----------------------------------------------------------------------------
+# Configuration Checks
+# -----------------------------------------------------------------------------
+# These report warnings instead of failing the plan, so existing callers are
+# not broken by upgrading.
+
+check "jdk_java_options_not_overridden" {
+  assert {
+    condition     = !contains([for env in var.container_environment : env.name], "JDK_JAVA_OPTIONS")
+    error_message = "container_environment sets JDK_JAVA_OPTIONS, which overrides the value the module builds (cluster options and the flag that makes license_key_secret_arn work). Pass JVM options through java_opts instead."
+  }
+}
+
+check "license_key_secret_not_duplicated" {
+  assert {
+    condition     = var.license_key_secret_arn == null || !contains([for secret in var.container_secrets : secret.name], "CONFIG_FORCE_quine_license__key")
+    error_message = "container_secrets already defines CONFIG_FORCE_quine_license__key. Remove that entry when using license_key_secret_arn; ECS rejects duplicate secret names."
+  }
 }
 
 # -----------------------------------------------------------------------------
