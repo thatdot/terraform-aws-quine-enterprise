@@ -8,7 +8,16 @@ Production-ready deployment of Quine Enterprise on AWS ECS Fargate with HTTPS an
 - Terraform >= 1.5.0
 - Route53 hosted zone for your domain (for HTTPS)
 - Quine Enterprise container image (from your registry or ECR)
-- Quine Enterprise license key
+- Quine Enterprise license key, stored in AWS Secrets Manager:
+
+```bash
+aws secretsmanager create-secret \
+  --name quine-enterprise/license-key \
+  --secret-string "$QUINE_LICENSE_KEY" \
+  --query ARN --output text
+```
+
+The command prints the secret's ARN, which you pass as `license_key_secret_arn`. The license key itself never goes into Terraform variables, state, the ECS task definition, or the container logs.
 
 ## Quick Start
 
@@ -27,8 +36,8 @@ project_name = "quine-enterprise-prod"
 # Container image (required)
 container_image = "your-registry/quine-enterprise:latest"
 
-# Quine Enterprise license (required)
-license_key        = "YOUR_LICENSE_KEY"
+# ARN of the Secrets Manager secret holding your license key (required)
+license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
 # HTTPS configuration (optional but recommended)
 enable_https   = true

@@ -84,12 +84,6 @@ locals {
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : (
     local.create_certificate ? aws_acm_certificate.this[0].arn : null
   )
-
-  # Build JDK_JAVA_OPTIONS from Quine Enterprise configuration variables
-  jdk_java_options = join(" ", [
-    "-Dquine.license-key=${var.license_key}",
-    "-Dquine.license-server-uri=${var.license_server_uri}",
-  ])
 }
 
 # -----------------------------------------------------------------------------
@@ -176,9 +170,12 @@ module "quine_enterprise" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # Java options for Quine Enterprise (license configuration)
-  # The module automatically adds cluster-related Java options
-  java_opts = local.jdk_java_options
+  # License key: injected by ECS from Secrets Manager, never stored in plain text
+  license_key_secret_arn = var.license_key_secret_arn
+
+  # Additional JVM options (non-secret settings only). The module sets these via
+  # JDK_JAVA_OPTIONS and automatically adds cluster-related options.
+  java_opts = "-Dquine.license-server-uri=${var.license_server_uri}"
 
   # Secrets (from SSM Parameter Store or Secrets Manager)
   container_secrets = var.container_secrets

@@ -19,9 +19,10 @@ variable "container_image" {
   type = string
 }
 
-variable "license_key" {
-  type      = string
-  sensitive = true
+# ARN of a pre-existing Secrets Manager secret holding the license key.
+# The CI role cannot manage secrets, and the key never passes through Terraform.
+variable "license_key_secret_arn" {
+  type = string
 }
 
 variable "license_server_uri" {
@@ -35,10 +36,8 @@ module "quine_enterprise" {
   container_image     = var.container_image
   cluster_target_size = 3
 
-  java_opts = join(" ", [
-    "-Dquine.license-key=${var.license_key}",
-    "-Dquine.license-server-uri=${var.license_server_uri}",
-  ])
+  license_key_secret_arn = var.license_key_secret_arn
+  java_opts              = "-Dquine.license-server-uri=${var.license_server_uri}"
 }
 
 output "alb_url" {
@@ -51,6 +50,10 @@ output "ecs_cluster_name" {
 
 output "ecs_service_name" {
   value = module.quine_enterprise.ecs_service_name
+}
+
+output "ecs_task_definition_arn" {
+  value = module.quine_enterprise.ecs_task_definition_arn
 }
 
 output "cluster_target_size" {

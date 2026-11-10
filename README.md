@@ -53,7 +53,10 @@ module "quine_enterprise" {
   source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
   project_name    = "my-quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+
+  # License key, read from AWS Secrets Manager (see "License Key" below)
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 }
 
 output "url" {
@@ -69,7 +72,9 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise-prod"
   environment     = "prod"
-  container_image = "your-registry/quine-enterprise:latest"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+
+  license_key_secret_arn = aws_secretsmanager_secret.quine_license.arn
 
   # Custom VPC
   vpc_id     = "vpc-0123456789abcdef0"
@@ -93,6 +98,28 @@ module "quine_enterprise" {
   }
 }
 ```
+
+## License Key
+
+Quine Enterprise needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN:
+
+```bash
+aws secretsmanager create-secret \
+  --name quine-enterprise/license-key \
+  --secret-string "$QUINE_LICENSE_KEY" \
+  --query ARN --output text
+```
+
+```hcl
+module "quine_enterprise" {
+  # ...
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+}
+```
+
+ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition, in Terraform state, or in the container logs.
+
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
 
 ## Requirements
 
@@ -160,15 +187,21 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_port`        | Container port                   | `number`       | `8080`               |
 | `container_cpu`         | CPU units (256-16384)            | `number`       | `2048`               |
 | `container_memory`      | Memory in MB                     | `number`       | `4096`               |
-| `container_environment` | Environment variables            | `list(object)` | `[]`                 |
+| `container_environment` | Environment variables (plain text) | `list(object)` | `[]`               |
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`                 |
+
+### License
+
+| Name                     | Description                                                                                         | Type     | Default |
+| ------------------------ | --------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` | `null`  |
 
 ### Load Balancer
 
 | Name                               | Description                        | Type     | Default                    |
 | ---------------------------------- | ---------------------------------- | -------- | -------------------------- |
 | `internal_alb`                     | Internal ALB (not internet-facing) | `bool`   | `false`                    |
-| `health_check_path`                | Health check path                  | `string` | `"/api/v1/admin/liveness"` |
+| `health_check_path`                | Health check path                  | `string` | `"/api/v2/system/liveness"` |
 | `health_check_interval`            | Health check interval (seconds)    | `number` | `30`                       |
 | `health_check_timeout`             | Health check timeout (seconds)     | `number` | `5`                        |
 | `health_check_healthy_threshold`   | Healthy threshold                  | `number` | `2`                        |
@@ -202,11 +235,11 @@ See the [examples](./examples/) directory for complete usage examples:
 
 | Name                               | Description                                                              | Type     | Default |
 | ---------------------------------- | ------------------------------------------------------------------------ | -------- | ------- |
-| `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `3`     |
+| `cluster_target_size`              | Target number of cluster members (enables multi-member mode when > 1)    | `number` | `1`     |
 | `cluster_port`                     | Port for Pekko remoting (inter-node communication after cluster formation) | `number` | `25520` |
 | `cluster_management_port`          | Port for Pekko cluster bootstrap HTTP discovery (contact point probing)  | `number` | `7626`  |
 | `service_discovery_namespace_name` | Private DNS namespace name (defaults to `{project_name}.local`)          | `string` | `null`  |
-| `java_opts`                        | Additional Java options to pass via JAVA_OPTS environment variable       | `string` | `""`    |
+| `java_opts`                        | Additional JVM options, passed via `JDK_JAVA_OPTIONS`. Plain text and logged at startup: no secrets | `string` | `""`    |
 
 ## Outputs
 
@@ -301,20 +334,26 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
+  # JVM options go through java_opts, which the module passes as JDK_JAVA_OPTIONS
+  # (the variable the JVM reads; the image ignores JAVA_OPTS).
+  java_opts = "-Xms4g -Xmx6g"
+
+  # Any Quine Enterprise setting can be set with a CONFIG_FORCE_* variable:
+  # "." becomes "_" and "-" becomes "__" (quine.webserver.address below).
   container_environment = [
     {
-      name  = "JAVA_OPTS"
-      value = "-Xms4g -Xmx6g"
-    },
-    {
-      name  = "QUINE_WEBSERVER_ADDRESS"
+      name  = "CONFIG_FORCE_quine_webserver_address"
       value = "0.0.0.0"
     }
   ]
 }
 ```
 
+Values in `java_opts` and `container_environment` are stored in plain text. Use `license_key_secret_arn` or `container_secrets` for anything sensitive.
+
 ### With Secrets
+
+The license key has its own input, `license_key_secret_arn` (see [License Key](#license-key)). Use `container_secrets` for any other secret; each `valueFrom` must be a full ARN.
 
 ```hcl
 module "quine_enterprise" {
@@ -368,7 +407,7 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
-  # Multi-member cluster configuration (default is 3)
+  # Multi-member cluster configuration (default is 1)
   cluster_target_size = 3
 
   # Container sizing for production cluster
@@ -389,7 +428,7 @@ output "seed_dns" {
 }
 ```
 
-For a single-member deployment (non-clustered), set `cluster_target_size = 1`:
+For a single-member deployment (non-clustered), leave `cluster_target_size` at its default of `1`:
 
 ```hcl
 module "quine_enterprise" {
@@ -402,6 +441,13 @@ module "quine_enterprise" {
 ```
 
 ## Upgrading
+
+### To the v2 API health check and secret-based license key
+
+- **`health_check_path` now defaults to `/api/v2/system/liveness`** (was `/api/v1/admin/liveness`). Quine Enterprise 2.2.1 serves both, but the v1 API is deprecated and will be removed. If you run a release that predates the v2 API, set `health_check_path = "/api/v1/admin/liveness"` explicitly.
+- **Move the license key out of `java_opts`.** Passing `-Dquine.license-key=...` in `java_opts` still works, but it exposes the key in the task definition and the logs. Store the key in Secrets Manager, set `license_key_secret_arn`, and remove the `-Dquine.license-key` option. Then rotate the key, since the old task definition revisions and log streams still contain it.
+- The module now always adds `-Dconfig.override_with_env_vars=true` to `JDK_JAVA_OPTIONS` so that `CONFIG_FORCE_*` environment variables take effect. Expect a new task definition revision and a rolling restart on the first apply.
+- The execution role's secrets policy (`aws_iam_role_policy.ecs_task_execution_secrets`) is now always created. Existing state is migrated automatically by a `moved` block; deployments without secrets gain one inline policy that grants no access on its own.
 
 ### From Direct Terraform to Module
 

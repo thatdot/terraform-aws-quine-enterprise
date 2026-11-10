@@ -28,14 +28,13 @@ variable "container_image" {
 # Quine Enterprise Configuration
 # -----------------------------------------------------------------------------
 
-variable "license_key" {
-  description = "Quine Enterprise license key."
+variable "license_key_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret that holds the Quine Enterprise license key. Create it outside Terraform so the key never enters Terraform variables or state."
   type        = string
-  sensitive   = true
 }
 
 variable "license_server_uri" {
   description = "Quine Enterprise license server URI."
   type        = string
-  default     = "https://license-server.dev.thatdot.com"
+  default     = "https://license.thatdot.com"
 }

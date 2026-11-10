@@ -24,7 +24,8 @@ concurrency:
 env:
   AWS_REGION: us-west-2
   TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
-  TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
+  # ARN of a pre-existing Secrets Manager secret; the key itself never reaches CI
+  TF_VAR_license_key_secret_arn: ${{ secrets.LICENSE_KEY_SECRET_ARN }}
   TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
 
 jobs:
@@ -74,6 +75,20 @@ jobs:
           echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
           echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
           echo "cluster_target_size=$(terraform output -raw cluster_target_size)" >> $GITHUB_OUTPUT
+          echo "ecs_task_definition_arn=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_OUTPUT
+
+      - name: Verify License Key Is Not In Task Definition
+        working-directory: .
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${{ steps.tf-outputs.outputs.ecs_task_definition_arn }} \
+            --query 'taskDefinition.containerDefinitions[0]')
+          if echo "$TASK_DEF" | jq -e '[.environment[].value] | any(test("license-key"))' > /dev/null; then
+            echo "License key setting found in plain-text container environment"
+            exit 1
+          fi
+          echo "$TASK_DEF" | jq -e '.secrets | any(.name == "CONFIG_FORCE_quine_license__key")' > /dev/null
+          echo "License key is injected as a container secret only"
 
       - name: Wait for ECS Service Healthy
         working-directory: .
@@ -89,18 +104,20 @@ jobs:
         run: |
           ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
           EXPECTED_MEMBERS="${{ steps.tf-outputs.outputs.cluster_target_size }}"
-          echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
+          echo "Testing endpoint: $ALB_URL/api/v2/system/status"
           echo "Expected cluster members: $EXPECTED_MEMBERS"
 
           # Poll until fullyUp=true and all members joined, or timeout
           for i in {1..30}; do
-            RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
+            RESPONSE=$(curl -s "$ALB_URL/api/v2/system/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
             MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
 
             if [ "$FULLY_UP" = "true" ] && [ "$MEMBER_COUNT" = "$EXPECTED_MEMBERS" ]; then
               echo "Cluster is fully up with $MEMBER_COUNT members!"
               echo "$RESPONSE" | jq .
+              echo "Deployed version:"
+              curl -s "$ALB_URL/api/v2/system/systemInfo" | jq .
               exit 0
             fi
 

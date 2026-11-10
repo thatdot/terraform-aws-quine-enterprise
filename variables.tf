@@ -171,7 +171,7 @@ variable "container_memory" {
 }
 
 variable "container_environment" {
-  description = "Environment variables to pass to the container."
+  description = "Environment variables to pass to the container. Values are stored in plain text in the task definition; use container_secrets for anything sensitive. Do not set JDK_JAVA_OPTIONS here (the module sets it; use java_opts instead)."
   type = list(object({
     name  = string
     value = string
@@ -180,7 +180,7 @@ variable "container_environment" {
 }
 
 variable "container_secrets" {
-  description = "Secrets to pass to the container from AWS Secrets Manager or SSM Parameter Store."
+  description = "Secrets to inject into the container as environment variables from AWS Secrets Manager or SSM Parameter Store. Each valueFrom must be a full ARN. For the license key, prefer license_key_secret_arn."
   type = list(object({
     name      = string
     valueFrom = string
@@ -199,9 +199,9 @@ variable "internal_alb" {
 }
 
 variable "health_check_path" {
-  description = "Health check path for the ALB target group."
+  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint (/api/v2/system/readiness is also available)."
   type        = string
-  default     = "/api/v1/admin/liveness"
+  default     = "/api/v2/system/liveness"
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
@@ -383,7 +383,22 @@ variable "service_discovery_namespace_name" {
 }
 
 variable "java_opts" {
-  description = "Additional Java options to pass to the Quine Enterprise container via JAVA_OPTS environment variable."
+  description = "Additional Java options passed to the Quine Enterprise JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets (such as the license key) here; use license_key_secret_arn instead."
   type        = string
   default     = ""
+}
+
+# -----------------------------------------------------------------------------
+# Quine Enterprise License Configuration
+# -----------------------------------------------------------------------------
+
+variable "license_key_secret_arn" {
+  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Quine Enterprise license key. ECS injects it into the container as the CONFIG_FORCE_quine_license__key environment variable, so the key never appears in the task definition or logs. A Secrets Manager ARN may carry the ':json-key:version-stage:version-id' suffix supported by ECS."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.license_key_secret_arn == null || can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", var.license_key_secret_arn))
+    error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
+  }
 }

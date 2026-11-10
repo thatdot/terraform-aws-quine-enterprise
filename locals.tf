@@ -62,8 +62,13 @@ locals {
   # Combined cluster Java options
   cluster_java_opts = "${local.cluster_java_opts_base}${local.cluster_java_opts_multi_member}"
 
-  # Full JAVA_OPTS combining user-provided and cluster options
-  java_opts_value = trimspace("${var.java_opts} ${local.cluster_java_opts}")
+  # Lets the JVM read configuration from CONFIG_FORCE_* environment variables
+  # (Typesafe Config). The container image does not enable this itself, and it
+  # is what allows the license key to arrive as an ECS-injected secret.
+  config_env_override_java_opt = "-Dconfig.override_with_env_vars=true"
+
+  # Full JDK_JAVA_OPTIONS combining user-provided, config-override, and cluster options
+  java_opts_value = trimspace("${var.java_opts} ${local.config_env_override_java_opt} ${local.cluster_java_opts}")
 
   # -----------------------------------------------------------------------------
   # Container Environment Variables
@@ -95,6 +100,33 @@ locals {
     local.seed_dns_environment,
     var.container_environment
   )
+
+  # -----------------------------------------------------------------------------
+  # Container Secrets
+  # -----------------------------------------------------------------------------
+
+  # License key, read by Quine Enterprise as the quine.license-key setting
+  license_secrets = var.license_key_secret_arn != null ? [
+    {
+      name      = "CONFIG_FORCE_quine_license__key"
+      valueFrom = var.license_key_secret_arn
+    }
+  ] : []
+
+  # Combined container secrets
+  container_secrets = concat(
+    local.license_secrets,
+    var.container_secrets
+  )
+
+  # ARNs the execution role must be able to read. A Secrets Manager valueFrom
+  # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
+  container_secret_arns = distinct([
+    for secret in local.container_secrets :
+    can(regex("^arn:[^:]*:secretsmanager:", secret.valueFrom))
+    ? join(":", slice(split(":", secret.valueFrom), 0, min(7, length(split(":", secret.valueFrom)))))
+    : secret.valueFrom
+  ])
 }
 
 # -----------------------------------------------------------------------------
