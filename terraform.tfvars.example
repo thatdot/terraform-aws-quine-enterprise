@@ -15,3 +15,6 @@ desired_count    = 1
 
 # Health Check
 health_check_path = "/api/v2/system/liveness"
+
+# License (Required) - ARN of the Secrets Manager secret holding your license key
+license_key_secret_arn = ""

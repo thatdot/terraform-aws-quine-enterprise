@@ -71,7 +71,7 @@ license_server_uri     = "https://license.thatdot.com" # License server URI
 # container_secrets = [
 #   {
 #     name      = "DATABASE_PASSWORD"
-#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/quine/db-password"
+#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/quine/db-password-AbCdEf"
 #   },
 #   {
 #     name      = "API_KEY"

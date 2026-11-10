@@ -393,6 +393,7 @@ variable "java_opts" {
   description = "Additional Java options passed to the Quine Enterprise JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets (such as the license key) here; use license_key_secret_arn instead."
   type        = string
   default     = ""
+  nullable    = false
 }
 
 # -----------------------------------------------------------------------------

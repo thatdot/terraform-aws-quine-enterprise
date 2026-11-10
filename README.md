@@ -117,6 +117,8 @@ module "quine_enterprise" {
 }
 ```
 
+Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append the ECS `:json-key::` suffix to the ARN so only the key is injected.
+
 ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_quine_license__key` environment variable, which Quine Enterprise reads as its `quine.license-key` setting. The module grants the task execution role read access to that one secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
 **Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
@@ -320,6 +322,8 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
   vpc_id          = module.vpc.vpc_id
   subnet_ids      = module.vpc.public_subnets
 }
@@ -362,10 +366,12 @@ module "quine_enterprise" {
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
 
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
+
   container_secrets = [
     {
       name      = "DATABASE_PASSWORD"
-      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass"
+      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass-AbCdEf"
     }
   ]
 }
@@ -379,6 +385,8 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
   enable_https    = true
   certificate_arn = aws_acm_certificate.quine_enterprise.arn
 }
@@ -406,6 +414,8 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise"
   container_image = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
   # Multi-member cluster configuration (default is 1)
   cluster_target_size = 3
@@ -436,6 +446,8 @@ module "quine_enterprise" {
 
   project_name        = "quine-enterprise-dev"
   container_image     = "your-registry/quine-enterprise:latest"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
   cluster_target_size = 1  # Single-member mode (no service discovery)
 }
 ```
