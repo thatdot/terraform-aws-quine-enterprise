@@ -115,7 +115,7 @@ jobs:
 
           # Poll until fullyUp=true and all members joined, or timeout
           for i in {1..30}; do
-            RESPONSE=$(curl -s "$ALB_URL/api/v2/system/status" || echo '{}')
+            RESPONSE=$(curl -s --max-time 10 "$ALB_URL/api/v2/system/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
             MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
 
@@ -123,7 +123,7 @@ jobs:
               echo "Cluster is fully up with $MEMBER_COUNT members!"
               echo "$RESPONSE" | jq .
               echo "Deployed version:"
-              curl -s "$ALB_URL/api/v2/system/systemInfo" | jq . || true
+              curl -s --max-time 10 "$ALB_URL/api/v2/system/systemInfo" | jq . || true
               exit 0
             fi
 

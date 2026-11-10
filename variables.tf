@@ -188,8 +188,8 @@ variable "container_secrets" {
   default = []
 
   validation {
-    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:", secret.valueFrom))])
-    error_message = "Each container_secrets valueFrom must be a full ARN (Secrets Manager secret or SSM parameter), because it is also used in the execution role's IAM policy."
+    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", secret.valueFrom))])
+    error_message = "Each container_secrets valueFrom must be the full ARN of a Secrets Manager secret or an SSM parameter, because it is also used in the execution role's IAM policy."
   }
 }
 

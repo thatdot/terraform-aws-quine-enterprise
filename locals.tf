@@ -105,10 +105,12 @@ locals {
   # Container Secrets
   # -----------------------------------------------------------------------------
 
-  # License key, read by Quine Enterprise as the quine.license-key setting
+  # Environment variable Quine Enterprise reads as its quine.license-key setting
+  license_key_env_name = "CONFIG_FORCE_quine_license__key"
+
   license_secrets = var.license_key_secret_arn != null ? [
     {
-      name      = "CONFIG_FORCE_quine_license__key"
+      name      = local.license_key_env_name
       valueFrom = var.license_key_secret_arn
     }
   ] : []
@@ -142,8 +144,8 @@ check "jdk_java_options_not_overridden" {
 
 check "license_key_secret_not_duplicated" {
   assert {
-    condition     = var.license_key_secret_arn == null || !contains([for secret in var.container_secrets : secret.name], "CONFIG_FORCE_quine_license__key")
-    error_message = "container_secrets already defines CONFIG_FORCE_quine_license__key. Remove that entry when using license_key_secret_arn; ECS rejects duplicate secret names."
+    condition     = var.license_key_secret_arn == null || !contains([for secret in var.container_secrets : secret.name], local.license_key_env_name)
+    error_message = "container_secrets already defines ${local.license_key_env_name}. Remove that entry when using license_key_secret_arn; ECS rejects duplicate secret names."
   }
 }
 
