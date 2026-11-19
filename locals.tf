@@ -121,6 +121,25 @@ locals {
     var.container_secrets
   )
 
+  # -----------------------------------------------------------------------------
+  # Container Health Check
+  # -----------------------------------------------------------------------------
+
+  # Requests the health check path over bash's built-in /dev/tcp and passes on
+  # any 2xx status. The container images ship bash but, from the minimal images
+  # onward, no curl or wget, so the check cannot depend on an HTTP client. The
+  # port and path are passed as arguments ($1, $2) rather than spliced into the
+  # script.
+  container_health_check_command = [
+    "CMD",
+    "/bin/bash",
+    "-c",
+    "exec 3<>\"/dev/tcp/127.0.0.1/$1\" && printf 'GET %s HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' \"$2\" >&3 && read -r _ code _ <&3 && code=$${code%$'\\r'} && [[ $code == 2[0-9][0-9] ]]",
+    "healthcheck",
+    tostring(var.container_port),
+    var.health_check_path,
+  ]
+
   # Every environment variable and secret name in the container. ECS rejects
   # duplicates, and a caller entry that repeats a module-set name (such as
   # JDK_JAVA_OPTIONS) would override it.

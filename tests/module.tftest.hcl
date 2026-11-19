@@ -39,8 +39,19 @@ run "defaults" {
   }
 
   assert {
-    condition     = strcontains(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command[1], "/api/v2/system/liveness")
-    error_message = "Container health check should default to the v2 liveness endpoint."
+    condition     = slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 4, 7) == ["healthcheck", "8080", "/api/v2/system/liveness"]
+    error_message = "Container health check should default to the container port and the v2 liveness endpoint."
+  }
+
+  # The minimal container images ship bash but no curl or wget
+  assert {
+    condition     = slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 0, 3) == ["CMD", "/bin/bash", "-c"]
+    error_message = "Container health check should run under bash without a shell wrapper."
+  }
+
+  assert {
+    condition     = !can(regex("curl|wget", jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command[3]))
+    error_message = "Container health check must not depend on curl or wget; the minimal images do not ship them."
   }
 
   assert {

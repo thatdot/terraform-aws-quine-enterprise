@@ -116,6 +116,36 @@ jobs:
             --services ${{ steps.tf-outputs.outputs.ecs_service_name }}
           echo "ECS service is stable!"
 
+      # services-stable does not look at the container health check, and a failing
+      # check takes minutes to stop a task, so confirm it passes explicitly
+      - name: Verify Container Health Checks Pass
+        working-directory: .
+        run: |
+          CLUSTER="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          for i in {1..36}; do
+            TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
+              --desired-status RUNNING --query 'taskArns' --output json | jq -r '.[]')
+            if [ -n "$TASKS" ]; then
+              STATUSES=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+                --query 'tasks[].healthStatus' --output json)
+              echo "Attempt $i: task health: $(echo "$STATUSES" | jq -c .)"
+              if echo "$STATUSES" | jq -e 'any(. == "UNHEALTHY")' > /dev/null; then
+                echo "A task failed its container health check"
+                exit 1
+              fi
+              if echo "$STATUSES" | jq -e 'length > 0 and all(. == "HEALTHY")' > /dev/null; then
+                echo "All tasks pass the container health check"
+                exit 0
+              fi
+            else
+              echo "Attempt $i: no running tasks yet"
+            fi
+            sleep 10
+          done
+          echo "Tasks did not report HEALTHY in time"
+          exit 1
+
       - name: Verify Cluster Fully Up
         working-directory: .
         run: |
