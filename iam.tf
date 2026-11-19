@@ -52,10 +52,8 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_additional" {
   policy_arn = each.value
 }
 
-# Policy for accessing secrets (only if secrets are configured)
+# Policy for reading container secrets (license key and container_secrets)
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
-  count = length(var.container_secrets) > 0 ? 1 : 0
-
   name = "${var.project_name}-ecs-execution-secrets"
   role = aws_iam_role.ecs_task_execution_role.id
 
@@ -66,20 +64,20 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue",
-          "ssm:GetParameters",
-          "ssm:GetParameter"
+          "ssm:GetParameters"
         ]
-        Resource = [for secret in var.container_secrets : secret.valueFrom]
+        Resource = local.container_secret_arns
       },
       {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt"
-        ]
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
         Resource = "*"
         Condition = {
           StringEquals = {
-            "kms:ViaService" = "secretsmanager.${local.aws_region}.amazonaws.com"
+            "kms:ViaService" = [
+              "secretsmanager.${local.aws_region}.amazonaws.com",
+              "ssm.${local.aws_region}.amazonaws.com"
+            ]
           }
         }
       }

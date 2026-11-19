@@ -24,8 +24,11 @@ concurrency:
 env:
   AWS_REGION: us-west-2
   TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
-  TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
-  TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
+  # ARN of a pre-existing Secrets Manager secret in the CI account and region
+  # (the CI role cannot create secrets). The key itself never reaches CI.
+  TF_VAR_license_key_secret_arn: ${{ secrets.LICENSE_KEY_SECRET_ARN }}
+  # JVM options that point this deployment at the CI environment
+  TF_VAR_java_opts: ${{ secrets.CI_JAVA_OPTS }}
 
 jobs:
   test:
@@ -37,17 +40,17 @@ jobs:
         working-directory: ci
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.14.3
           # Disable wrapper to allow capturing output with $(terraform output -raw ...)
           terraform_wrapper: false
 
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -74,6 +77,35 @@ jobs:
           echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
           echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
           echo "cluster_target_size=$(terraform output -raw cluster_target_size)" >> $GITHUB_OUTPUT
+          echo "ecs_task_definition_arn=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_OUTPUT
+
+      - name: Verify License Configuration In Task Definition
+        working-directory: .
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${{ steps.tf-outputs.outputs.ecs_task_definition_arn }} \
+            --query 'taskDefinition.containerDefinitions[0]')
+          # jq failures abort the step (bash -e), so a malformed response cannot pass
+          LEAKS=$(echo "$TASK_DEF" | jq '[.environment[]? | select((.name | test("license"; "i")) or (.value | test("license-key")))] | length')
+          if [ "$LEAKS" != "0" ]; then
+            echo "License setting found in the plain-text container environment"
+            exit 1
+          fi
+          if ! echo "$TASK_DEF" | jq -e '(.secrets // []) | any(.name == "CONFIG_FORCE_quine_license__key")' > /dev/null; then
+            echo "License key is not injected as a container secret"
+            exit 1
+          fi
+          echo "License key is injected as a container secret only"
+          # The CI environment's JVM options must reach the container unchanged
+          if [ -z "$TF_VAR_java_opts" ]; then
+            echo "The CI_JAVA_OPTS repository secret is not set"
+            exit 1
+          fi
+          if ! echo "$TASK_DEF" | jq -e --arg opts "$TF_VAR_java_opts" '[.environment[]? | select(.name == "JDK_JAVA_OPTIONS") | .value] | any(startswith($opts))' > /dev/null; then
+            echo "The CI JVM options are missing from the task definition"
+            exit 1
+          fi
+          echo "CI JVM options are applied"
 
       - name: Wait for ECS Service Healthy
         working-directory: .
@@ -84,17 +116,41 @@ jobs:
             --services ${{ steps.tf-outputs.outputs.ecs_service_name }}
           echo "ECS service is stable!"
 
+      # services-stable does not look at the container health check, and a failing
+      # check takes minutes to stop a task, so confirm it passes explicitly
+      - name: Verify Container Health Checks Pass
+        working-directory: .
+        run: |
+          CLUSTER="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          for i in {1..36}; do
+            TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
+              --query 'taskArns[]' --output text)
+            STATUSES=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query 'tasks[].healthStatus' --output text)
+            echo "Attempt $i: task health: $STATUSES"
+            case "$STATUSES" in
+              *UNHEALTHY*) echo "A task failed its container health check"; exit 1 ;;
+              *UNKNOWN* | "") ;;
+              *) echo "All tasks pass the container health check"; exit 0 ;;
+            esac
+            sleep 10
+          done
+          echo "Tasks did not report HEALTHY in time"
+          exit 1
+
       - name: Verify Cluster Fully Up
         working-directory: .
         run: |
           ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
           EXPECTED_MEMBERS="${{ steps.tf-outputs.outputs.cluster_target_size }}"
-          echo "Testing endpoint: $ALB_URL/api/v1/admin/status"
+          echo "Testing endpoint: $ALB_URL/api/v2/system/status"
           echo "Expected cluster members: $EXPECTED_MEMBERS"
 
           # Poll until fullyUp=true and all members joined, or timeout
           for i in {1..30}; do
-            RESPONSE=$(curl -s "$ALB_URL/api/v1/admin/status" || echo '{}')
+            # -f: treat HTTP errors (e.g. an ALB 502 page) as a failed attempt, not as a response to parse
+            RESPONSE=$(curl -sf --max-time 10 "$ALB_URL/api/v2/system/status" || echo '{}')
             FULLY_UP=$(echo "$RESPONSE" | jq -r '.fullyUp // false')
             MEMBER_COUNT=$(echo "$RESPONSE" | jq -r '(.cluster.clusterMembers // {}) | keys | length')
 
@@ -113,13 +169,41 @@ jobs:
           echo "$RESPONSE" | jq .
           exit 1
 
+      # Records what this run actually tested on the run's summary page. The image
+      # reference is a masked secret and names a moving tag, so the digest and the
+      # build the product reports are the only reliable record.
+      - name: Summarize Deployed Build
+        if: always() && steps.tf-outputs.outcome == 'success'
+        continue-on-error: true
+        working-directory: .
+        run: |
+          CLUSTER="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
+            --query 'taskArns[]' --output text)
+          DIGESTS=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+            --query 'tasks[].containers[].imageDigest' --output json | jq -r 'unique | join(", ")')
+          INFO=$(curl -sf --max-time 10 "${{ steps.tf-outputs.outputs.alb_url }}/api/v2/system/systemInfo" || echo '{}')
+          {
+            echo "### Quine Enterprise build under test"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "$INFO" | jq -r '
+              "| Build version | `\(.version // "unavailable")` |",
+              "| Git commit | `\(.gitCommit // "unavailable")` |",
+              "| Commit date | \(.gitCommitDate // "unavailable") |",
+              "| Java runtime | \(.javaRuntimeVersion // "unavailable") |"'
+            echo "| Image digest | \`${DIGESTS:-unavailable}\` |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Terraform Destroy
         if: always()
         run: terraform destroy -auto-approve -input=false
 
       - name: Notify Slack on Failure
         if: failure() && github.event_name != 'pull_request'
-        uses: slackapi/slack-github-action@v2.0.0
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook

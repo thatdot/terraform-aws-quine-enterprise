@@ -59,6 +59,11 @@ resource "aws_service_discovery_service" "seed" {
 
   # Use ECS-managed health checks rather than Route 53 health checks
   # ECS automatically registers/deregisters tasks based on their health
+  #
+  # AWS now ignores failure_threshold and always uses 1. It stays set because,
+  # with the AWS provider versions this module supports (< 6.0), the provider
+  # reads 1 back from the API and would plan to replace this service on every
+  # run if the argument were omitted.
   health_check_custom_config {
     failure_threshold = 1
   }

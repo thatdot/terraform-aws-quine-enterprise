@@ -37,17 +37,6 @@ provider "aws" {
   }
 }
 
-# -----------------------------------------------------------------------------
-# Locals - Build JDK_JAVA_OPTIONS from variables
-# -----------------------------------------------------------------------------
-
-locals {
-  jdk_java_options = join(" ", [
-    "-Dquine.license-key=${var.license_key}",
-    "-Dquine.license-server-uri=${var.license_server_uri}",
-  ])
-}
-
 # Deploy Quine Enterprise using the module
 module "quine_enterprise" {
   source = "../../"
@@ -58,9 +47,12 @@ module "quine_enterprise" {
   # Required: Container image - must be provided by the user
   container_image = var.container_image
 
-  # Java options for Quine Enterprise (license configuration)
-  # The module automatically adds cluster-related Java options
-  java_opts = local.jdk_java_options
+  # License: the key is injected by ECS from Secrets Manager and is never
+  # stored in plain text
+  license_key_secret_arn = var.license_key_secret_arn
+
+  # Additional JVM options (non-secret settings only)
+  java_opts = var.java_opts
 
   # Optional: Environment tag (defaults to "dev")
   environment = "dev"

@@ -61,15 +61,16 @@ container_port  = 8080
 container_cpu    = 4096   # 4 vCPU
 container_memory = 8192   # 8 GB
 
-# Quine Enterprise Configuration
-license_key        = ""                                       # Required - your Quine Enterprise license key
-license_server_uri = "https://license.thatdot.com" # License server URI
+# Quine Enterprise License (Required)
+# Store the key in AWS Secrets Manager first and pass the secret's ARN here:
+#   aws secretsmanager create-secret --name quine-enterprise/license-key --secret-string "$QUINE_LICENSE_KEY"
+license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
 
 # Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
 # container_secrets = [
 #   {
 #     name      = "DATABASE_PASSWORD"
-#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/quine/db-password"
+#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/quine/db-password-AbCdEf"
 #   },
 #   {
 #     name      = "API_KEY"
@@ -81,7 +82,7 @@ license_server_uri = "https://license.thatdot.com" # License server URI
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------
 internal_alb      = false  # Set true for internal-only access
-health_check_path = "/api/v1/admin/liveness"
+# health_check_path = "/api/v2/system/liveness"  # module default
 
 # Enable deletion protection in production (disabled by default for easier iteration)
 # enable_deletion_protection = true
