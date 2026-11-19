@@ -128,8 +128,9 @@ locals {
   # Requests the health check path over bash's built-in /dev/tcp and passes on
   # any 2xx status. The container images ship bash but, from the minimal images
   # onward, no curl or wget, so the check cannot depend on an HTTP client. The
-  # port and path are passed as arguments ($1, $2) rather than spliced into the
-  # script.
+  # port and path are passed as arguments ($1, $2) so that a path containing
+  # '%' or quotes cannot alter the script. The request mirrors the image's own
+  # HEALTHCHECK, which ECS does not run.
   container_health_check_command = [
     "CMD",
     "/bin/bash",

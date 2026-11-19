@@ -53,7 +53,7 @@ module "quine_enterprise" {
   source  = "github.com/thatdot/terraform-aws-quine-enterprise"
 
   project_name    = "my-quine-enterprise"
-  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.2"  # Required
 
   # License key, read from AWS Secrets Manager (see "License Key" below)
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
@@ -72,7 +72,7 @@ module "quine_enterprise" {
 
   project_name    = "quine-enterprise-prod"
   environment     = "prod"
-  container_image = "your-registry/quine-enterprise:2.2.1"  # Required
+  container_image = "your-registry/quine-enterprise:2.2.2"  # Required
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
