@@ -210,6 +210,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | `health_check_timeout`             | Health check timeout (seconds)     | `number` | `5`                        |
 | `health_check_healthy_threshold`   | Healthy threshold                  | `number` | `2`                        |
 | `health_check_unhealthy_threshold` | Unhealthy threshold                | `number` | `3`                        |
+| `health_check_grace_period`        | Startup grace period (seconds)     | `number` | `60`                       |
 | `deregistration_delay`             | Deregistration delay (seconds)     | `number` | `30`                       |
 | `enable_deletion_protection`       | Enable ALB deletion protection     | `bool`   | `false`                    |
 

@@ -261,6 +261,17 @@ variable "health_check_unhealthy_threshold" {
   }
 }
 
+variable "health_check_grace_period" {
+  description = "Seconds after a task starts during which ECS ignores failing load balancer and container health checks, so a slow start is not treated as a failure."
+  type        = number
+  default     = 60
+
+  validation {
+    condition     = var.health_check_grace_period >= 0 && var.health_check_grace_period <= 2147483647 && floor(var.health_check_grace_period) == var.health_check_grace_period
+    error_message = "Health check grace period must be a whole number of seconds, 0 or greater."
+  }
+}
+
 variable "deregistration_delay" {
   description = "Time to wait before deregistering targets from the target group (seconds)."
   type        = number

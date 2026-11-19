@@ -149,6 +149,10 @@ resource "aws_ecs_service" "main" {
     assign_public_ip = var.assign_public_ip
   }
 
+  # Without this the ALB health check gets no startup tolerance; only the
+  # container health check has a start period
+  health_check_grace_period_seconds = var.health_check_grace_period
+
   load_balancer {
     target_group_arn = aws_lb_target_group.main.arn
     container_name   = var.container_name

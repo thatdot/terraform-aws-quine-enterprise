@@ -38,6 +38,11 @@ run "defaults" {
     error_message = "ALB health check should default to the v2 liveness endpoint."
   }
 
+  assert {
+    condition     = aws_ecs_service.main.health_check_grace_period_seconds == 60
+    error_message = "The service should give new tasks a 60 second health check grace period by default."
+  }
+
   # Element 3 is the probe script itself; the rest pins how it is invoked
   assert {
     condition = concat(
