@@ -1,6 +1,5 @@
 # Terraform AWS Quine Enterprise Module
 
-[![Terraform Registry](https://img.shields.io/badge/terraform-registry-blue.svg)](https://registry.terraform.io/modules/thatdot/quine-enterprise/aws)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Terraform module to deploy Quine Enterprise on AWS ECS Fargate with an Application Load Balancer.
@@ -50,7 +49,7 @@ Terraform module to deploy Quine Enterprise on AWS ECS Fargate with an Applicati
 
 ```hcl
 module "quine_enterprise" {
-  source  = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "my-quine-enterprise"
   container_image = "your-registry/quine-enterprise:2.2.2"  # Required
@@ -68,7 +67,7 @@ output "url" {
 
 ```hcl
 module "quine_enterprise" {
-  source  = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise-prod"
   environment     = "prod"
@@ -139,9 +138,9 @@ The default health check uses the v2 API (`/api/v2/system/liveness`), so the con
 
 ## Providers
 
-| Name | Version |
-| ---- | ------- |
-| aws  | >= 5.0  |
+| Name | Version       |
+| ---- | ------------- |
+| aws  | >= 5.0, < 6.0 |
 
 ## Usage
 
@@ -321,10 +320,10 @@ See the [examples](./examples/) directory for complete usage examples:
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -337,10 +336,10 @@ module "quine_enterprise" {
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -368,10 +367,10 @@ The license key has its own input, `license_key_secret_arn` (see [License Key](#
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -388,10 +387,10 @@ module "quine_enterprise" {
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -418,10 +417,10 @@ Deploy a 3-member Quine Enterprise cluster with DNS-based service discovery for 
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -450,10 +449,10 @@ For a single-member deployment (non-clustered), leave `cluster_target_size` at i
 
 ```hcl
 module "quine_enterprise" {
-  source = "github.com/thatdot/terraform-aws-quine-enterprise"
+  source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise-dev"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
