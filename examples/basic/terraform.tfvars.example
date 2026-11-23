@@ -9,7 +9,7 @@
 aws_region = "us-west-2"
 
 # Container Configuration (Required)
-container_image = "your-registry/quine-enterprise:latest"
+container_image = "your-registry/quine-enterprise:2.2.2"
 
 # Quine Enterprise License (Required)
 # Store the key in AWS Secrets Manager first and pass the secret's ARN here:

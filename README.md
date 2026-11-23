@@ -138,9 +138,9 @@ The default health check uses the v2 API (`/api/v2/system/liveness`), so the con
 
 ## Providers
 
-| Name | Version |
-| ---- | ------- |
-| aws  | >= 5.0  |
+| Name | Version       |
+| ---- | ------------- |
+| aws  | >= 5.0, < 6.0 |
 
 ## Usage
 
@@ -323,7 +323,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -339,7 +339,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -370,7 +370,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -390,7 +390,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -420,7 +420,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 
@@ -452,7 +452,7 @@ module "quine_enterprise" {
   source = "github.com/thatdot/terraform-aws-quine-enterprise?ref=v2.0.0"
 
   project_name    = "quine-enterprise-dev"
-  container_image = "your-registry/quine-enterprise:latest"
+  container_image = "your-registry/quine-enterprise:2.2.2"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
 

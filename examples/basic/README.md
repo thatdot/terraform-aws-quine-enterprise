@@ -22,7 +22,7 @@ cp terraform.tfvars.example terraform.tfvars
 
 ```hcl
 # Container image (required)
-container_image = "your-registry/quine-enterprise:latest"
+container_image = "your-registry/quine-enterprise:2.2.2"
 
 # ARN of the Secrets Manager secret holding your license key (required)
 license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:quine-enterprise/license-key-AbCdEf"
